@@ -1,0 +1,58 @@
+#include <rclcpp/rclcpp.hpp>
+#include <behaviortree_cpp/bt_factory.h>
+
+// 1. INCLUDE YOUR LEAF HEADER
+// (Ensure this file exists in include/my_robot_behavior/)
+#include "bt_pkg/check_goal_seen.hpp"
+
+// If you have other nodes (like ReadJson), include them too
+// #include "my_robot_behavior/read_json.hpp" 
+
+int main(int argc, char **argv)
+{
+    // A. Initialize ROS 2 (Standard)
+    rclcpp::init(argc, argv);
+    
+    // Create the ROS node. 
+    // This node will handle the communication for the Service Client.
+    auto node = std::make_shared<rclcpp::Node>("bt_manager");
+
+    // B. Initialize the Factory
+    BT::BehaviorTreeFactory factory;
+
+    // 2. REGISTER YOUR LEAF
+    // The string "CallCheckCandidates" MUST match the tag name in your XML file.
+    factory.registerNodeType<CallCheckCandidates>("CallCheckCandidates");
+
+    // (Register other nodes here...)
+    // factory.registerNodeType<ReadJson>("ReadJson");
+
+    // 3. SETUP BLACKBOARD (Crucial for Service Clients)
+    // Your CallCheckCandidates needs a ROS node to create_client().
+    // We pass it via the Blackboard.
+    auto blackboard = BT::Blackboard::create();
+    blackboard->set<rclcpp::Node::SharedPtr>("node", node);
+
+    // C. Load and Run the Tree
+    std::string xml_path = "/path/to/your/behavior_tree.xml"; // Adjust path or use parameters
+    
+    try {
+        // Create the tree using the blackboard we just configured
+        auto tree = factory.createTreeFromFile(xml_path, blackboard);
+
+        // Simple Tick Loop (10Hz)
+        rclcpp::Rate rate(10);
+        while (rclcpp::ok())
+        {
+            tree.tickOnce();
+            rclcpp::spin_some(node); // Handle ROS callbacks (replies from service)
+            rate.sleep();
+        }
+    }
+    catch (const std::exception& ex) {
+        RCLCPP_ERROR(node->get_logger(), "Tree Error: %s", ex.what());
+    }
+
+    rclcpp::shutdown();
+    return 0;
+}

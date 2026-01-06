@@ -1,0 +1,69 @@
+<root main_tree_to_execute="MainTree">
+    
+    <BehaviorTree ID="MainTree">
+        <Sequence name="MissionPipeline">
+
+            <RunLLM 
+                script_path="/home/sensor/ros2_ws/src/yolo11_seg_bringup/scripts/llm_interpreter.py"
+            />
+
+            <ReadJson 
+                file_path="/home/sensor/ros2_ws/src/yolo11_seg_bringup/config/robot_command.json"
+                candidate_ids="{candidates}" 
+                prompt="{clip_prompt}" 
+                clusters="{cluster_list}" 
+            />
+
+            <Fallback name="CheckOrExplore">
+
+                <Sequence name="NavigateToKnownGoal">
+                    
+                    <CallCheckCandidates 
+                        candidate_ids="{candidates}" 
+                        prompt_list="{clip_prompt}" 
+                        target_pose="{target_pose}"
+                    />
+
+                    <NavigateToPose goal="{target_pose}"/>
+                </Sequence>
+
+                <Sequence name="NavigateToCentroid">
+                    
+                    <SelectCluster 
+                        input_clusters="{cluster_list}" 
+                        selected_pose="{search_pose}"
+                    />
+
+                    <NavigateToPose goal="{search_pose}"/>
+                    
+                </Sequence>
+
+            </Fallback>
+
+        </Sequence>
+    </BehaviorTree>
+
+    <TreeNodesModel>
+        <Action ID="RunLLM">
+            <input_port name="script_path"/>
+        </Action>
+        <Action ID="ReadJson">
+            <input_port name="file_path"/>
+            <output_port name="candidate_ids"/>
+            <output_port name="prompt"/>
+            <output_port name="clusters"/>
+        </Action>
+        <Action ID="CallCheckCandidates">
+            <input_port name="candidate_ids"/>
+            <input_port name="prompt_list"/>
+            <output_port name="target_pose"/>
+        </Action>
+        <Action ID="SelectCluster">
+            <input_port name="input_clusters"/>
+            <output_port name="selected_pose"/>
+        </Action>
+        <Action ID="NavigateToPose">
+            <input_port name="goal"/>
+        </Action>
+    </TreeNodesModel>
+</root>

@@ -18,6 +18,7 @@ find_package(behaviortree_cpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav2_msgs REQUIRED)
 find_package(nlohmann_json REQUIRED)
+find_package(yolo11_seg_interfaces REQUIRED)
 
 # ==========================================
 # 2. BUILD THE EXECUTABLE
@@ -38,6 +39,7 @@ ament_target_dependencies(bt_manager
   geometry_msgs
   nav2_msgs
   nlohmann_json
+  yolo11_seg_interfaces
 )
 
 # Tell the compiler where the header (.hpp) files are located
@@ -59,11 +61,6 @@ install(TARGETS bt_manager
 
 # 2. Install the Behavior Tree XML files
 install(DIRECTORY bt_xml
-  DESTINATION share/${PROJECT_NAME}
-)
-
-# 3. Install the JSON Config files
-install(DIRECTORY config
   DESTINATION share/${PROJECT_NAME}
 )
 

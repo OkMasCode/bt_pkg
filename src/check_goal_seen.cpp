@@ -1,4 +1,4 @@
-#include "my_robot_behavior/check_goal_seen.hpp"
+#include "bt_pkg/check_goal_seen.hpp"
 
 BT::NodeStatus CallCheckCandidates::onStart()
 {
@@ -39,8 +39,8 @@ BT::NodeStatus CallCheckCandidates::onStart()
         return BT::NodeStatus::FAILURE;
     }
 
-    RCLCPP_INFO(node->get_logger(), "Checking %ld candidates for: '%s'...", 
-                request->candidate_ids.size(), request->prompt.c_str());
+    RCLCPP_INFO(node->get_logger(), "Checking %ld candidates with %ld prompt(s): '%s'...", 
+                request->candidate_ids.size(), request->prompts.size(), request->prompts[0].c_str());
 
     // Send asynchronously so we don't freeze the tree
     future_result_ = client_->async_send_request(request).share();
