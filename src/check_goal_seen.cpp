@@ -24,13 +24,13 @@ BT::NodeStatus CallCheckCandidates::onStart()
     }
 
     // Handle the prompt list: The JSON gives a list ["a fridge", "gray fridge"]
-    // The Service expects a single string. We pick the first one.
+    // Send all prompts for ensemble averaging in the service
     std::vector<std::string> prompts;
     if (!getInput("prompt_list", prompts) || prompts.empty()) {
         RCLCPP_WARN(node->get_logger(), "No prompts provided. Cannot check candidates.");
         return BT::NodeStatus::FAILURE;
     }
-    request->prompt = prompts[0]; // Take the first description
+    request->prompts = prompts; // Send all prompts for ensemble
 
     // 4. Send the Request
     // Wait max 1 second for the server to be available
