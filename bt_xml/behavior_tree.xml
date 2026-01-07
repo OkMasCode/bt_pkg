@@ -3,10 +3,6 @@
     <BehaviorTree ID="MainTree">
         <Sequence name="MissionPipeline">
 
-            <RunLLM 
-                script_path="/home/sensor/ros2_ws/src/yolo11_seg_bringup/scripts/llm_interpreter.py"
-            />
-
             <ReadJson 
                 file_path="/home/sensor/ros2_ws/src/yolo11_seg_bringup/config/robot_command.json"
                 candidate_ids="{candidates}" 

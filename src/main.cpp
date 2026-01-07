@@ -4,6 +4,7 @@
 // 1. INCLUDE YOUR LEAF HEADER
 // (Ensure this file exists in include/my_robot_behavior/)
 #include "bt_pkg/check_goal_seen.hpp"
+#include "bt_pkg/read_json.hpp"
 
 // If you have other nodes (like ReadJson), include them too
 // #include "my_robot_behavior/read_json.hpp" 
@@ -23,6 +24,7 @@ int main(int argc, char **argv)
     // 2. REGISTER YOUR LEAF
     // The string "CallCheckCandidates" MUST match the tag name in your XML file.
     factory.registerNodeType<CallCheckCandidates>("CallCheckCandidates");
+    factory.registerNodeType<ReadJson>("ReadJson");
 
     // (Register other nodes here...)
     // factory.registerNodeType<ReadJson>("ReadJson");
@@ -34,7 +36,7 @@ int main(int argc, char **argv)
     blackboard->set<rclcpp::Node::SharedPtr>("node", node);
 
     // C. Load and Run the Tree
-    std::string xml_path = "/path/to/your/behavior_tree.xml"; // Adjust path or use parameters
+    std::string xml_path = "/home/sensor/ros2_ws/src/bt_pkg/bt_xml/behavior_tree.xml";
     
     try {
         // Create the tree using the blackboard we just configured
