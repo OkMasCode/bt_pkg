@@ -23,11 +23,8 @@ int main(int argc, char **argv)
 
     // 2. REGISTER YOUR LEAF
     // The string "CallCheckCandidates" MUST match the tag name in your XML file.
-    factory.registerNodeType<CallCheckCandidates>("CallCheckCandidates");
     factory.registerNodeType<ReadJson>("ReadJson");
-
-    // (Register other nodes here...)
-    // factory.registerNodeType<ReadJson>("ReadJson");
+    factory.registerNodeType<CallCheckCandidates>("CallCheckCandidates");
 
     // 3. SETUP BLACKBOARD (Crucial for Service Clients)
     // Your CallCheckCandidates needs a ROS node to create_client().

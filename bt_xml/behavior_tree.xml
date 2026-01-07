@@ -1,8 +1,8 @@
 <root main_tree_to_execute="MainTree">
-    
-    <BehaviorTree ID="MainTree">
-        <Sequence name="MissionPipeline">
 
+    <BehaviorTree ID="MainTree">
+
+        <Sequence name="MissionPipeline">
             <ReadJson 
                 file_path="/home/sensor/ros2_ws/src/yolo11_seg_bringup/config/robot_command.json"
                 candidats_ids="{candidates}" 
@@ -13,36 +13,28 @@
             <Fallback name="CheckOrExplore">
 
                 <Sequence name="NavigateToKnownGoal">
-                    
                     <CallCheckCandidates 
                         candidats_ids="{candidates}" 
-                        prompt_list="{clip_prompt}" 
                         target_pose="{target_pose}"
                     />
-
                     <NavigateToPose goal="{target_pose}"/>
                 </Sequence>
 
                 <Sequence name="NavigateToCentroid">
-                    
                     <SelectCluster 
                         input_clusters="{cluster_id}" 
                         selected_pose="{search_pose}"
                     />
-
                     <NavigateToPose goal="{search_pose}"/>
-                    
                 </Sequence>
 
             </Fallback>
 
         </Sequence>
+        
     </BehaviorTree>
 
     <TreeNodesModel>
-        <Action ID="RunLLM">
-            <input_port name="script_path"/>
-        </Action>
         <Action ID="ReadJson">
             <input_port name="file_path"/>
             <output_port name="candidats_ids"/>
@@ -51,7 +43,6 @@
         </Action>
         <Action ID="CallCheckCandidates">
             <input_port name="candidats_ids"/>
-            <input_port name="prompt_list"/>
             <output_port name="target_pose"/>
         </Action>
         <Action ID="SelectCluster">

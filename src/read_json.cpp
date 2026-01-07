@@ -47,26 +47,20 @@ BT::NodeStatus ReadJson::tick()
         setOutput("prompt", prompts);
 
 
-        // --- EXTRACT: Cluster Centroid Coordinates ---
-        // New schema: cluster_info contains centroid under "coords"
-        geometry_msgs::msg::Pose centroid;
-        bool have_centroid = false;
+        // --- EXTRACT: Cluster ID ---
+        // New schema: cluster_info contains cluster_id
+        int cluster_id_value = -1;
         if (data.contains("cluster_info") && data["cluster_info"].is_object()) {
             const auto& ci = data["cluster_info"];
-            if (ci.contains("coords") && ci["coords"].is_object()) {
-                const auto& coords = ci["coords"];
-                centroid.position.x = coords.value("x", 0.0);
-                centroid.position.y = coords.value("y", 0.0);
-                centroid.position.z = coords.value("z", 0.0);
-                centroid.orientation.w = 1.0;
-                have_centroid = true;
+            if (ci.contains("cluster_id")) {
+                cluster_id_value = ci["cluster_id"].get<int>();
             }
         }
-        if (!have_centroid) {
-            std::cerr << "[ReadJson] Error: Missing cluster_info.coords centroid" << std::endl;
+        if (cluster_id_value < 0) {
+            std::cerr << "[ReadJson] Error: Missing cluster_info.cluster_id" << std::endl;
             return BT::NodeStatus::FAILURE;
         }
-        setOutput("cluster_id", centroid);
+        setOutput("cluster_id", cluster_id_value);
 
         std::cout << "[ReadJson] Successfully parsed command. Found " 
               << candidates.size() << " candidates and set cluster centroid." << std::endl;

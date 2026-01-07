@@ -23,15 +23,6 @@ BT::NodeStatus CallCheckCandidates::onStart()
         return BT::NodeStatus::FAILURE;
     }
 
-    // Handle the prompt list: The JSON gives a list ["a fridge", "gray fridge"]
-    // Send all prompts for ensemble averaging in the service
-    std::vector<std::string> prompts;
-    if (!getInput("prompt_list", prompts) || prompts.empty()) {
-        RCLCPP_WARN(node->get_logger(), "No prompts provided. Cannot check candidates.");
-        return BT::NodeStatus::FAILURE;
-    }
-    request->prompts = prompts; // Send all prompts for ensemble
-
     // 4. Send the Request
     // Wait max 1 second for the server to be available
     if (!client_->wait_for_service(std::chrono::seconds(1))) {
@@ -39,8 +30,8 @@ BT::NodeStatus CallCheckCandidates::onStart()
         return BT::NodeStatus::FAILURE;
     }
 
-    RCLCPP_INFO(node->get_logger(), "Checking %ld candidates with %ld prompt(s): '%s'...", 
-                request->candidate_ids.size(), request->prompts.size(), request->prompts[0].c_str());
+    RCLCPP_INFO(node->get_logger(), "Checking %ld candidates...", 
+                request->candidate_ids.size());
 
     // Send asynchronously so we don't freeze the tree
     future_result_ = client_->async_send_request(request).share();

@@ -24,7 +24,7 @@ public:
             // Outputs: Data for the rest of the tree
             BT::OutputPort<std::vector<std::string>>("candidats_ids"),
             BT::OutputPort<std::vector<std::string>>("prompt"), 
-            BT::OutputPort<geometry_msgs::msg::Pose>("cluster_id")
+            BT::OutputPort<int>("cluster_id")
         };
     }
 
