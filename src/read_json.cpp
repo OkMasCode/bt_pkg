@@ -22,53 +22,54 @@ BT::NodeStatus ReadJson::tick()
         json data = json::parse(f);
 
         // --- EXTRACT: Candidate IDs ---
-        // Maps to "goal_objects" in your uploaded JSON
+        // New schema: "goal_objects" is an array of objects { id, coords }
         std::vector<std::string> candidates;
-        if (data.contains("goal_objects")) {
+        if (data.contains("goal_objects") && data["goal_objects"].is_array()) {
             for (const auto& item : data["goal_objects"]) {
-                candidates.push_back(item.get<std::string>());
+                if (item.is_object() && item.contains("id")) {
+                    candidates.push_back(item["id"].get<std::string>());
+                }
             }
         }
-        setOutput("candidate_ids", candidates);
-
+        setOutput("candidats_ids", candidates);
 
         // --- EXTRACT: Clip Prompt ---
         // Maps to "clip_prompt" (which is a list of strings)
         std::vector<std::string> prompts;
-        if (data.contains("clip_prompt")) {
+        if (data.contains("clip_prompt") && data["clip_prompt"].is_array()) {
             for (const auto& item : data["clip_prompt"]) {
                 prompts.push_back(item.get<std::string>());
             }
+        } else if (data.contains("prompt") && data["prompt"].is_string()) {
+            // Fallback: single prompt string if clip_prompt not provided
+            prompts.push_back(data["prompt"].get<std::string>());
         }
         setOutput("prompt", prompts);
 
 
-        // --- EXTRACT: Clusters (Alternatives) ---
-        // Maps to "alternatives" -> "coords" in your uploaded JSON
-        std::vector<geometry_msgs::msg::Pose> clusters;
-        if (data.contains("alternatives")) {
-            for (const auto& item : data["alternatives"]) {
-                if (item.contains("coords")) {
-                    auto coords = item["coords"];
-                    geometry_msgs::msg::Pose p;
-                    
-                    // JSON: { "x": 4.5, "y": 2.5, "z": 0.0 }
-                    p.position.x = coords.value("x", 0.0);
-                    p.position.y = coords.value("y", 0.0);
-                    p.position.z = coords.value("z", 0.0);
-                    
-                    // Default orientation (facing forward)
-                    p.orientation.w = 1.0; 
-                    
-                    clusters.push_back(p);
-                }
+        // --- EXTRACT: Cluster Centroid Coordinates ---
+        // New schema: cluster_info contains centroid under "coords"
+        geometry_msgs::msg::Pose centroid;
+        bool have_centroid = false;
+        if (data.contains("cluster_info") && data["cluster_info"].is_object()) {
+            const auto& ci = data["cluster_info"];
+            if (ci.contains("coords") && ci["coords"].is_object()) {
+                const auto& coords = ci["coords"];
+                centroid.position.x = coords.value("x", 0.0);
+                centroid.position.y = coords.value("y", 0.0);
+                centroid.position.z = coords.value("z", 0.0);
+                centroid.orientation.w = 1.0;
+                have_centroid = true;
             }
         }
-        setOutput("clusters", clusters);
+        if (!have_centroid) {
+            std::cerr << "[ReadJson] Error: Missing cluster_info.coords centroid" << std::endl;
+            return BT::NodeStatus::FAILURE;
+        }
+        setOutput("cluster_id", centroid);
 
         std::cout << "[ReadJson] Successfully parsed command. Found " 
-                  << candidates.size() << " candidates and " 
-                  << clusters.size() << " clusters." << std::endl;
+              << candidates.size() << " candidates and set cluster centroid." << std::endl;
 
         return BT::NodeStatus::SUCCESS;
 

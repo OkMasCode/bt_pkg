@@ -22,9 +22,9 @@ public:
             BT::InputPort<std::string>("file_path"),
             
             // Outputs: Data for the rest of the tree
-            BT::OutputPort<std::vector<std::string>>("candidate_ids"),
+            BT::OutputPort<std::vector<std::string>>("candidats_ids"),
             BT::OutputPort<std::vector<std::string>>("prompt"), 
-            BT::OutputPort<std::vector<geometry_msgs::msg::Pose>>("clusters")
+            BT::OutputPort<geometry_msgs::msg::Pose>("cluster_id")
         };
     }
 

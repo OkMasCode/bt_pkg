@@ -5,9 +5,9 @@
 
             <ReadJson 
                 file_path="/home/sensor/ros2_ws/src/yolo11_seg_bringup/config/robot_command.json"
-                candidate_ids="{candidates}" 
+                candidats_ids="{candidates}" 
                 prompt="{clip_prompt}" 
-                clusters="{cluster_list}" 
+                cluster_id="{cluster}" 
             />
 
             <Fallback name="CheckOrExplore">
@@ -15,7 +15,7 @@
                 <Sequence name="NavigateToKnownGoal">
                     
                     <CallCheckCandidates 
-                        candidate_ids="{candidates}" 
+                        candidats_ids="{candidates}" 
                         prompt_list="{clip_prompt}" 
                         target_pose="{target_pose}"
                     />
@@ -26,7 +26,7 @@
                 <Sequence name="NavigateToCentroid">
                     
                     <SelectCluster 
-                        input_clusters="{cluster_list}" 
+                        input_clusters="{cluster_id}" 
                         selected_pose="{search_pose}"
                     />
 
@@ -45,12 +45,12 @@
         </Action>
         <Action ID="ReadJson">
             <input_port name="file_path"/>
-            <output_port name="candidate_ids"/>
+            <output_port name="candidats_ids"/>
             <output_port name="prompt"/>
-            <output_port name="clusters"/>
+            <output_port name="cluster"/>
         </Action>
         <Action ID="CallCheckCandidates">
-            <input_port name="candidate_ids"/>
+            <input_port name="candidats_ids"/>
             <input_port name="prompt_list"/>
             <output_port name="target_pose"/>
         </Action>
