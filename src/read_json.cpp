@@ -47,13 +47,31 @@ BT::NodeStatus ReadJson::tick()
         setOutput("prompt", prompts);
 
 
-        // --- EXTRACT: Cluster ID ---
-        // New schema: cluster_info contains cluster_id
+        // --- EXTRACT: Cluster ID and Centroid ---
+        // New schema: cluster_info contains cluster_id and coords
         int cluster_id_value = -1;
+        geometry_msgs::msg::Pose cluster_centroid;
+        
         if (data.contains("cluster_info") && data["cluster_info"].is_object()) {
             const auto& ci = data["cluster_info"];
             if (ci.contains("cluster_id")) {
                 cluster_id_value = ci["cluster_id"].get<int>();
+            }
+            
+            // Extract centroid coordinates
+            if (ci.contains("coords") && ci["coords"].is_object()) {
+                const auto& coords = ci["coords"];
+                cluster_centroid.position.x = coords["x"].get<double>();
+                cluster_centroid.position.y = coords["y"].get<double>();
+                cluster_centroid.position.z = coords["z"].get<double>();
+                // Default orientation (identity quaternion)
+                cluster_centroid.orientation.w = 1.0;
+                cluster_centroid.orientation.x = 0.0;
+                cluster_centroid.orientation.y = 0.0;
+                cluster_centroid.orientation.z = 0.0;
+            } else {
+                std::cerr << "[ReadJson] Error: Missing cluster_info.coords" << std::endl;
+                return BT::NodeStatus::FAILURE;
             }
         }
         if (cluster_id_value < 0) {
@@ -61,9 +79,13 @@ BT::NodeStatus ReadJson::tick()
             return BT::NodeStatus::FAILURE;
         }
         setOutput("cluster_id", cluster_id_value);
+        setOutput("cluster_centroid", cluster_centroid);
 
         std::cout << "[ReadJson] Successfully parsed command. Found " 
-              << candidates.size() << " candidates and set cluster centroid." << std::endl;
+              << candidates.size() << " candidates and set cluster centroid at (" 
+              << cluster_centroid.position.x << ", " 
+              << cluster_centroid.position.y << ", " 
+              << cluster_centroid.position.z << ")." << std::endl;
 
         return BT::NodeStatus::SUCCESS;
 

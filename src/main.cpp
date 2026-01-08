@@ -25,7 +25,6 @@ int main(int argc, char **argv)
     // The string "CallCheckCandidates" MUST match the tag name in your XML file.
     factory.registerNodeType<ReadJson>("ReadJson");
     factory.registerNodeType<CallCheckCandidates>("CallCheckCandidates");
-
     // 3. SETUP BLACKBOARD (Crucial for Service Clients)
     // Your CallCheckCandidates needs a ROS node to create_client().
     // We pass it via the Blackboard.

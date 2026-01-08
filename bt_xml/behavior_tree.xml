@@ -8,6 +8,7 @@
                 candidats_ids="{candidates}" 
                 prompt="{clip_prompt}" 
                 cluster_id="{cluster}" 
+                cluster_centroid="{cluster_centroid}"
             />
 
             <Fallback name="CheckOrExplore">
@@ -21,11 +22,7 @@
                 </Sequence>
 
                 <Sequence name="NavigateToCentroid">
-                    <SelectCluster 
-                        input_clusters="{cluster_id}" 
-                        selected_pose="{search_pose}"
-                    />
-                    <NavigateToPose goal="{search_pose}"/>
+                    <NavigateToPose goal="{cluster_centroid}"/>
                 </Sequence>
 
             </Fallback>
@@ -40,14 +37,11 @@
             <output_port name="candidats_ids"/>
             <output_port name="prompt"/>
             <output_port name="cluster"/>
+            <output_port name="cluster_centroid"/>
         </Action>
         <Action ID="CallCheckCandidates">
             <input_port name="candidats_ids"/>
             <output_port name="target_pose"/>
-        </Action>
-        <Action ID="SelectCluster">
-            <input_port name="input_clusters"/>
-            <output_port name="selected_pose"/>
         </Action>
         <Action ID="NavigateToPose">
             <input_port name="goal"/>

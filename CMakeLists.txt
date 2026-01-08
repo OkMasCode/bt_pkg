@@ -15,10 +15,12 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(behaviortree_cpp REQUIRED)
+find_package(rclcpp_action REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav2_msgs REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(yolo11_seg_interfaces REQUIRED)
+find_package(nav2_behavior_tree REQUIRED)
 
 # ==========================================
 # 2. BUILD THE EXECUTABLE
@@ -29,13 +31,14 @@ add_executable(bt_manager
   src/main.cpp
   src/read_json.cpp
   src/check_goal_seen.cpp
-  src/explore_action.cpp
+  src/navigate_to_pose.cpp
 )
 
 # Link the executable to the found libraries
 ament_target_dependencies(bt_manager
   rclcpp
   behaviortree_cpp
+  rclcpp_action
   geometry_msgs
   nav2_msgs
   nlohmann_json
