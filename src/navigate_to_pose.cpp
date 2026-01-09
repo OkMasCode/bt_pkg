@@ -36,7 +36,7 @@ BT::NodeStatus NavigateToPose::onStart()
     auto send_goal_options = rclcpp_action::Client<Nav2Action>::SendGoalOptions();
     
     // We request the goal and save the future
-    future_goal_handle_ = action_client_->async_send_goal(goal_msg, send_goal_options).share();
+    future_goal_handle_ = action_client_->async_send_goal(goal_msg, send_goal_options);
 
     return BT::NodeStatus::RUNNING;
 }
@@ -58,7 +58,7 @@ BT::NodeStatus NavigateToPose::onRunning()
             }
             
             // Goal accepted! Now we start waiting for the Result (arrival)
-            future_result_ = action_client_->async_get_result(goal_handle_).share();
+            future_result_ = action_client_->async_get_result(goal_handle_);
         
         } else {
             return BT::NodeStatus::RUNNING; // Still waiting for acceptance

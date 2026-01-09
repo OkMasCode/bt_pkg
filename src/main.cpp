@@ -5,9 +5,7 @@
 // (Ensure this file exists in include/my_robot_behavior/)
 #include "bt_pkg/check_goal_seen.hpp"
 #include "bt_pkg/read_json.hpp"
-
-// If you have other nodes (like ReadJson), include them too
-// #include "my_robot_behavior/read_json.hpp" 
+#include "bt_pkg/navigate_to_pose.hpp"
 
 int main(int argc, char **argv)
 {
@@ -25,6 +23,7 @@ int main(int argc, char **argv)
     // The string "CallCheckCandidates" MUST match the tag name in your XML file.
     factory.registerNodeType<ReadJson>("ReadJson");
     factory.registerNodeType<CallCheckCandidates>("CallCheckCandidates");
+    factory.registerNodeType<NavigateToPose>("NavigateToPose");
     // 3. SETUP BLACKBOARD (Crucial for Service Clients)
     // Your CallCheckCandidates needs a ROS node to create_client().
     // We pass it via the Blackboard.

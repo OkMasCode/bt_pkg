@@ -5,7 +5,7 @@
         <Sequence name="MissionPipeline">
             <ReadJson 
                 file_path="/home/sensor/ros2_ws/src/yolo11_seg_bringup/config/robot_command.json"
-                candidats_ids="{candidates}" 
+                candidates_ids="{candidates}" 
                 prompt="{clip_prompt}" 
                 cluster_id="{cluster}" 
                 cluster_centroid="{cluster_centroid}"
@@ -15,7 +15,7 @@
 
                 <Sequence name="NavigateToKnownGoal">
                     <CallCheckCandidates 
-                        candidats_ids="{candidates}" 
+                        candidates_ids="{candidates}" 
                         target_pose="{target_pose}"
                     />
                     <NavigateToPose goal="{target_pose}"/>
@@ -34,13 +34,13 @@
     <TreeNodesModel>
         <Action ID="ReadJson">
             <input_port name="file_path"/>
-            <output_port name="candidats_ids"/>
+            <output_port name="candidates_ids"/>
             <output_port name="prompt"/>
             <output_port name="cluster"/>
             <output_port name="cluster_centroid"/>
         </Action>
         <Action ID="CallCheckCandidates">
-            <input_port name="candidats_ids"/>
+            <input_port name="candidates_ids"/>
             <output_port name="target_pose"/>
         </Action>
         <Action ID="NavigateToPose">
