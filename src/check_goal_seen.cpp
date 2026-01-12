@@ -18,8 +18,8 @@ BT::NodeStatus CallCheckCandidates::onStart()
     auto request = std::make_shared<CheckCandidates::Request>();
 
     // Get inputs from ports
-    if (!getInput("candidate_ids", request->candidate_ids)) {
-        RCLCPP_ERROR(node->get_logger(), "Missing candidate_ids input");
+    if (!getInput("candidates_ids", request->candidates_ids)) {
+        RCLCPP_ERROR(node->get_logger(), "Missing candidates_ids input");
         return BT::NodeStatus::FAILURE;
     }
 
@@ -31,7 +31,7 @@ BT::NodeStatus CallCheckCandidates::onStart()
     }
 
     RCLCPP_INFO(node->get_logger(), "Checking %ld candidates...", 
-                request->candidate_ids.size());
+                request->candidates_ids.size());
 
     // Send asynchronously so we don't freeze the tree
     future_result_ = client_->async_send_request(request).share();

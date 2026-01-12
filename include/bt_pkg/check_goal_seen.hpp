@@ -20,7 +20,7 @@ public:
     {
         return {
             // INPUTS: defined in ReadJson and passed here via XML
-            BT::InputPort<std::vector<std::string>>("candidate_ids"),
+            BT::InputPort<std::vector<std::string>>("candidates_ids"),
             
             // OUTPUT: The target for NavigateToPose
             BT::OutputPort<geometry_msgs::msg::PoseStamped>("target_pose")
