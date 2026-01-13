@@ -2,7 +2,7 @@
 
 #include "behaviortree_cpp/action_node.h"
 #include "rclcpp/rclcpp.hpp"
-#include "geometry_msgs/msg/pose.hpp"
+#include "geometry_msgs/msg/pose_stamped.hpp"
 #include <fstream>
 #include <nlohmann/json.hpp>
 
@@ -22,10 +22,10 @@ public:
             BT::InputPort<std::string>("file_path"),
             
             // Outputs: Data for the rest of the tree
-            BT::OutputPort<std::vector<std::string>>("candidats_ids"),
+            BT::OutputPort<std::vector<std::string>>("candidates_ids"),
             BT::OutputPort<std::vector<std::string>>("prompt"), 
-            BT::OutputPort<int>("cluster_id"),
-            BT::OutputPort<geometry_msgs::msg::Pose>("cluster_centroid")
+            BT::OutputPort<int>("cluster"),
+            BT::OutputPort<geometry_msgs::msg::PoseStamped>("cluster_centroid")
         };
     }
 

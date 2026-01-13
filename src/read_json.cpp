@@ -31,7 +31,7 @@ BT::NodeStatus ReadJson::tick()
                 }
             }
         }
-        setOutput("candidats_ids", candidates);
+        setOutput("candidates_ids", candidates);
 
         // --- EXTRACT: Clip Prompt ---
         // Maps to "clip_prompt" (which is a list of strings)
@@ -50,7 +50,7 @@ BT::NodeStatus ReadJson::tick()
         // --- EXTRACT: Cluster ID and Centroid ---
         // New schema: cluster_info contains cluster_id and coords
         int cluster_id_value = -1;
-        geometry_msgs::msg::Pose cluster_centroid;
+        geometry_msgs::msg::PoseStamped cluster_centroid;
         
         if (data.contains("cluster_info") && data["cluster_info"].is_object()) {
             const auto& ci = data["cluster_info"];
@@ -61,14 +61,16 @@ BT::NodeStatus ReadJson::tick()
             // Extract centroid coordinates
             if (ci.contains("coords") && ci["coords"].is_object()) {
                 const auto& coords = ci["coords"];
-                cluster_centroid.position.x = coords["x"].get<double>();
-                cluster_centroid.position.y = coords["y"].get<double>();
-                cluster_centroid.position.z = coords["z"].get<double>();
+                cluster_centroid.header.frame_id = "map";
+                cluster_centroid.header.stamp = rclcpp::Clock().now();
+                cluster_centroid.pose.position.x = coords["x"].get<double>();
+                cluster_centroid.pose.position.y = coords["y"].get<double>();
+                cluster_centroid.pose.position.z = coords["z"].get<double>();
                 // Default orientation (identity quaternion)
-                cluster_centroid.orientation.w = 1.0;
-                cluster_centroid.orientation.x = 0.0;
-                cluster_centroid.orientation.y = 0.0;
-                cluster_centroid.orientation.z = 0.0;
+                cluster_centroid.pose.orientation.w = 1.0;
+                cluster_centroid.pose.orientation.x = 0.0;
+                cluster_centroid.pose.orientation.y = 0.0;
+                cluster_centroid.pose.orientation.z = 0.0;
             } else {
                 std::cerr << "[ReadJson] Error: Missing cluster_info.coords" << std::endl;
                 return BT::NodeStatus::FAILURE;
@@ -78,14 +80,14 @@ BT::NodeStatus ReadJson::tick()
             std::cerr << "[ReadJson] Error: Missing cluster_info.cluster_id" << std::endl;
             return BT::NodeStatus::FAILURE;
         }
-        setOutput("cluster_id", cluster_id_value);
+        setOutput("cluster", cluster_id_value);
         setOutput("cluster_centroid", cluster_centroid);
 
         std::cout << "[ReadJson] Successfully parsed command. Found " 
               << candidates.size() << " candidates and set cluster centroid at (" 
-              << cluster_centroid.position.x << ", " 
-              << cluster_centroid.position.y << ", " 
-              << cluster_centroid.position.z << ")." << std::endl;
+              << cluster_centroid.pose.position.x << ", " 
+              << cluster_centroid.pose.position.y << ", " 
+              << cluster_centroid.pose.position.z << ")." << std::endl;
 
         return BT::NodeStatus::SUCCESS;
 

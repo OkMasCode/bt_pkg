@@ -1,4 +1,4 @@
-<root main_tree_to_execute="MainTree">
+<root main_tree_to_execute="MainTree" BTCPP_format="4">
 
     <BehaviorTree ID="MainTree">
 
@@ -7,7 +7,7 @@
                 file_path="/home/sensor/ros2_ws/src/yolo11_seg_bringup/config/robot_command.json"
                 candidates_ids="{candidates}" 
                 prompt="{clip_prompt}" 
-                cluster_id="{cluster}" 
+                cluster="{cluster}" 
                 cluster_centroid="{cluster_centroid}"
             />
 
