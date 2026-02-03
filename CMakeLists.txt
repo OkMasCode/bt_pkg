@@ -17,6 +17,7 @@ find_package(rclcpp REQUIRED)
 find_package(behaviortree_cpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(nav2_msgs REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(yolo11_seg_interfaces REQUIRED)
@@ -32,6 +33,7 @@ add_executable(bt_manager
   src/read_json.cpp
   src/check_goal_seen.cpp
   src/navigate_to_pose.cpp
+  src/find_approach_pose.cpp
 )
 
 # Link the executable to the found libraries
@@ -40,6 +42,7 @@ ament_target_dependencies(bt_manager
   behaviortree_cpp
   rclcpp_action
   geometry_msgs
+  nav_msgs
   nav2_msgs
   nlohmann_json
   yolo11_seg_interfaces
@@ -64,11 +67,6 @@ install(TARGETS bt_manager
 
 # 2. Install the Behavior Tree XML files
 install(DIRECTORY bt_xml
-  DESTINATION share/${PROJECT_NAME}
-)
-
-# 4. Install the Launch files
-install(DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}
 )
 

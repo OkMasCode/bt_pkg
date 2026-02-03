@@ -1,87 +1,69 @@
 #include "bt_pkg/check_goal_seen.hpp"
 
-BT::NodeStatus CallCheckCandidates::onStart()
+BT::NodeStatus CallCheckCandidates::tick()
 {
-    // 1. Get the ROS Node from the Blackboard
-    // (This was set in main.cpp: blackboard->set<rclcpp::Node::SharedPtr>("node", node))
     auto node = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
     if (!node) {
         throw std::runtime_error("Missing ROS Node in Blackboard");
     }
 
-    // 2. Initialize the Client (only once)
-    if (!client_) {
-        client_ = node->create_client<CheckCandidates>("check_candidates");
-    }
+    std::vector<std::string> candidates_ids;
+    std::vector<double> similarity_scores;
+    std::vector<geometry_msgs::msg::PoseStamped> goal_poses;
+    geometry_msgs::msg::PoseStamped cluster_centroid;
+    double similarity_threshold = 0.0;
 
-    // 3. Prepare the Request
-    auto request = std::make_shared<CheckCandidates::Request>();
-
-    // Get inputs from ports
-    if (!getInput("candidates_ids", request->candidates_ids)) {
+    if (!getInput("candidates_ids", candidates_ids)) {
         RCLCPP_ERROR(node->get_logger(), "Missing candidates_ids input");
         return BT::NodeStatus::FAILURE;
     }
-
-    // 4. Send the Request
-    // Wait max 1 second for the server to be available
-    if (!client_->wait_for_service(std::chrono::seconds(1))) {
-        RCLCPP_WARN(node->get_logger(), "check_candidates service not available");
+    if (!getInput("similarity_scores", similarity_scores)) {
+        RCLCPP_ERROR(node->get_logger(), "Missing similarity_scores input");
         return BT::NodeStatus::FAILURE;
     }
-
-    RCLCPP_INFO(node->get_logger(), "Checking %ld candidates...", 
-                request->candidates_ids.size());
-
-    // Send asynchronously so we don't freeze the tree
-    future_result_ = client_->async_send_request(request).share();
-
-    return BT::NodeStatus::RUNNING;
-}
-
-BT::NodeStatus CallCheckCandidates::onRunning()
-{
-    // 1. Check if the response has arrived
-    if (future_result_.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready) {
-        return BT::NodeStatus::RUNNING; // Still waiting...
+    if (!getInput("goal_poses", goal_poses)) {
+        RCLCPP_ERROR(node->get_logger(), "Missing goal_poses input");
+        return BT::NodeStatus::FAILURE;
     }
+    if (!getInput("cluster_centroid", cluster_centroid)) {
+        RCLCPP_ERROR(node->get_logger(), "Missing cluster_centroid input");
+        return BT::NodeStatus::FAILURE;
+    }
+    getInput("similarity_threshold", similarity_threshold);
 
-    // 2. Get the result
-    auto response = future_result_.get();
-    auto node = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
-
-    if (response->match_found) {
-        RCLCPP_INFO(node->get_logger(), "Match Found! ID: %s (Score: %.2f)", 
-                    response->best_candidate_id.c_str(), response->max_score);
-
-        // 3. Create the PoseStamped for Navigation
-        geometry_msgs::msg::PoseStamped goal_pose;
-        goal_pose.header.stamp = node->now();
-        goal_pose.header.frame_id = "map"; // Assuming coordinates are in map frame
-
-        // Map the service response (x, y) to the Pose
-        goal_pose.pose.position.x = response->position.x;
-        goal_pose.pose.position.y = response->position.y;
-        goal_pose.pose.position.z = 0.0;
-        
-        // Orientation: standard facing forward (w=1.0)
-        goal_pose.pose.orientation.w = 1.0; 
-        goal_pose.pose.orientation.x = 0.0;
-        goal_pose.pose.orientation.y = 0.0;
-        goal_pose.pose.orientation.z = 0.0;
-
-        // 4. Write to Output Port (so NavigateToPose can read it)
-        setOutput("target_pose", goal_pose);
-
+    if (candidates_ids.empty() || similarity_scores.empty() || goal_poses.empty()) {
+        RCLCPP_WARN(node->get_logger(), "Empty candidates/similarity/poses. Using cluster centroid.");
+        setOutput("target_pose", cluster_centroid);
         return BT::NodeStatus::SUCCESS;
-    } 
-    else {
-        RCLCPP_WARN(node->get_logger(), "No match found above threshold.");
-        return BT::NodeStatus::FAILURE; // This triggers the Fallback to "Exploration"
     }
-}
 
-void CallCheckCandidates::onHalted()
-{
-    // Optional: Cancel the request if the tree stops this node
+    if (similarity_scores.size() != goal_poses.size()) {
+        RCLCPP_WARN(node->get_logger(), "Mismatch sizes: similarity_scores=%zu, goal_poses=%zu. Using cluster centroid.",
+                    similarity_scores.size(), goal_poses.size());
+        setOutput("target_pose", cluster_centroid);
+        return BT::NodeStatus::SUCCESS;
+    }
+
+    size_t best_idx = 0;
+    double best_score = similarity_scores[0];
+    for (size_t i = 1; i < similarity_scores.size(); ++i) {
+        if (similarity_scores[i] > best_score) {
+            best_score = similarity_scores[i];
+            best_idx = i;
+        }
+    }
+
+    if (best_score >= similarity_threshold) {
+        RCLCPP_INFO(node->get_logger(), "Selecting goal pose (score=%.2f >= %.2f)",
+                    best_score, similarity_threshold);
+        setOutput("target_pose", goal_poses[best_idx]);
+        setOutput("is_object_goal", true);
+    } else {
+        RCLCPP_INFO(node->get_logger(), "Selecting cluster centroid (score=%.2f < %.2f)",
+                    best_score, similarity_threshold);
+        setOutput("target_pose", cluster_centroid);
+        setOutput("is_object_goal", false);
+    }
+
+    return BT::NodeStatus::SUCCESS;
 }

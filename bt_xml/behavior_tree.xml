@@ -4,28 +4,47 @@
 
         <Sequence name="MissionPipeline">
             <ReadJson 
-                file_path="/home/sensor/ros2_ws/src/yolo11_seg_bringup/config/robot_command.json"
+                file_path="/workspaces/ros2_ws/src/yolo11_seg_bringup/config/robot_command.json"
                 candidates_ids="{candidates}" 
+                similarity_scores="{similarity_scores}"
+                goal_poses="{goal_poses}"
                 prompt="{clip_prompt}" 
                 cluster="{cluster}" 
                 cluster_centroid="{cluster_centroid}"
             />
 
-            <Fallback name="CheckOrExplore">
+            <Sequence name="DecideAndNavigate">
+                <CallCheckCandidates 
+                    candidates_ids="{candidates}" 
+                    similarity_scores="{similarity_scores}"
+                    goal_poses="{goal_poses}"
+                    cluster_centroid="{cluster_centroid}"
+                    similarity_threshold="80.0"
+                    target_pose="{target_pose}"
+                    is_object_goal="{is_object}"
+                />
+                
+                <Fallback name="ChooseNavigationStrategy">
+                    <Sequence name="NavigateToObject">
+                        <CheckIsObject is_object="{is_object}"/>
+                        <FindApproachPose
+                            goal_pose="{target_pose}"
+                            approach_pose="{approach_pose}"
+                            costmap_topic="/global_costmap/costmap"
+                            min_radius="1.5"
+                            max_radius="2.5"
+                            radius_step="0.1"
+                            angle_step_deg="20.0"
+                            free_threshold="0"
+                        />
+                        <NavigateToPose goal="{approach_pose}"/>
+                    </Sequence>
 
-                <Sequence name="NavigateToKnownGoal">
-                    <CallCheckCandidates 
-                        candidates_ids="{candidates}" 
-                        target_pose="{target_pose}"
-                    />
-                    <NavigateToPose goal="{target_pose}"/>
-                </Sequence>
-
-                <Sequence name="NavigateToCentroid">
-                    <NavigateToPose goal="{cluster_centroid}"/>
-                </Sequence>
-
-            </Fallback>
+                    <Sequence name="NavigateToCentroid">
+                        <NavigateToPose goal="{target_pose}"/>
+                    </Sequence>
+                </Fallback>
+            </Sequence>
 
         </Sequence>
         
@@ -35,16 +54,36 @@
         <Action ID="ReadJson">
             <input_port name="file_path"/>
             <output_port name="candidates_ids"/>
+            <output_port name="similarity_scores"/>
+            <output_port name="goal_poses"/>
             <output_port name="prompt"/>
             <output_port name="cluster"/>
             <output_port name="cluster_centroid"/>
         </Action>
         <Action ID="CallCheckCandidates">
             <input_port name="candidates_ids"/>
+            <input_port name="similarity_scores"/>
+            <input_port name="goal_poses"/>
+            <input_port name="cluster_centroid"/>
+            <input_port name="similarity_threshold"/>
             <output_port name="target_pose"/>
+            <output_port name="is_object_goal"/>
+        </Action>
+        <Action ID="FindApproachPose">
+            <input_port name="goal_pose"/>
+            <input_port name="costmap_topic"/>
+            <input_port name="min_radius"/>
+            <input_port name="max_radius"/>
+            <input_port name="radius_step"/>
+            <input_port name="angle_step_deg"/>
+            <input_port name="free_threshold"/>
+            <output_port name="approach_pose"/>
         </Action>
         <Action ID="NavigateToPose">
             <input_port name="goal"/>
         </Action>
+        <Condition ID="CheckIsObject">
+            <input_port name="is_object"/>
+        </Condition>
     </TreeNodesModel>
 </root>

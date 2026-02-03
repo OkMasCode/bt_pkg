@@ -3,16 +3,13 @@
 #include "behaviortree_cpp/action_node.h"
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
-#include "yolo11_seg_interfaces/srv/check_candidates.hpp"
+#include <vector>
 
-// Shorten the namespace for cleaner code
-using CheckCandidates = yolo11_seg_interfaces::srv::CheckCandidates;
-
-class CallCheckCandidates : public BT::StatefulActionNode
+class CallCheckCandidates : public BT::SyncActionNode
 {
 public:
     CallCheckCandidates(const std::string& name, const BT::NodeConfiguration& config)
-      : BT::StatefulActionNode(name, config)
+            : BT::SyncActionNode(name, config)
     {}
 
     // Define the inputs (from JSON) and outputs (to Navigation)
@@ -21,19 +18,16 @@ public:
         return {
             // INPUTS: defined in ReadJson and passed here via XML
             BT::InputPort<std::vector<std::string>>("candidates_ids"),
+            BT::InputPort<std::vector<double>>("similarity_scores"),
+            BT::InputPort<std::vector<geometry_msgs::msg::PoseStamped>>("goal_poses"),
+            BT::InputPort<geometry_msgs::msg::PoseStamped>("cluster_centroid"),
+            BT::InputPort<double>("similarity_threshold"),
             
             // OUTPUT: The target for NavigateToPose
-            BT::OutputPort<geometry_msgs::msg::PoseStamped>("target_pose")
+            BT::OutputPort<geometry_msgs::msg::PoseStamped>("target_pose"),
+            BT::OutputPort<bool>("is_object_goal")
         };
     }
 
-    BT::NodeStatus onStart() override;
-    BT::NodeStatus onRunning() override;
-    void onHalted() override;
-
-private:
-    rclcpp::Client<CheckCandidates>::SharedPtr client_;
-    
-    // This holds the "future" result while we wait for the server
-    std::shared_future<std::shared_ptr<CheckCandidates::Response>> future_result_;
+    BT::NodeStatus tick() override;
 };

@@ -6,6 +6,8 @@
 #include "bt_pkg/check_goal_seen.hpp"
 #include "bt_pkg/read_json.hpp"
 #include "bt_pkg/navigate_to_pose.hpp"
+#include "bt_pkg/find_approach_pose.hpp"
+#include "bt_pkg/check_is_object.hpp"
 
 int main(int argc, char **argv)
 {
@@ -24,6 +26,8 @@ int main(int argc, char **argv)
     factory.registerNodeType<ReadJson>("ReadJson");
     factory.registerNodeType<CallCheckCandidates>("CallCheckCandidates");
     factory.registerNodeType<NavigateToPose>("NavigateToPose");
+    factory.registerNodeType<FindApproachPose>("FindApproachPose");
+    factory.registerNodeType<CheckIsObject>("CheckIsObject");
     // 3. SETUP BLACKBOARD (Crucial for Service Clients)
     // Your CallCheckCandidates needs a ROS node to create_client().
     // We pass it via the Blackboard.
@@ -31,7 +35,7 @@ int main(int argc, char **argv)
     blackboard->set<rclcpp::Node::SharedPtr>("node", node);
 
     // C. Load and Run the Tree
-    std::string xml_path = "/home/sensor/ros2_ws/src/bt_pkg/bt_xml/behavior_tree.xml";
+    std::string xml_path = "/workspaces/ros2_ws/src/bt_pkg/bt_xml/behavior_tree.xml";
     
     try {
         // Create the tree using the blackboard we just configured

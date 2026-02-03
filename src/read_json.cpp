@@ -21,22 +21,54 @@ BT::NodeStatus ReadJson::tick()
         // 3. Parse JSON using nlohmann library
         json data = json::parse(f);
 
-        // --- EXTRACT: Candidate IDs ---
-        // New schema: "goal_objects" is an array of objects { id, coords }
+        // --- EXTRACT: Candidate IDs + Similarity Scores ---
+        // New schema: "goal_objects" is an array of objects { id, similarity_score, coords }
         std::vector<std::string> candidates;
+        std::vector<double> similarity_scores;
+        std::vector<geometry_msgs::msg::PoseStamped> goal_poses;
         if (data.contains("goal_objects") && data["goal_objects"].is_array()) {
             for (const auto& item : data["goal_objects"]) {
                 if (item.is_object() && item.contains("id")) {
                     candidates.push_back(item["id"].get<std::string>());
+                    if (item.contains("similarity_score") && item["similarity_score"].is_number()) {
+                        similarity_scores.push_back(item["similarity_score"].get<double>());
+                    } else {
+                        similarity_scores.push_back(0.0);
+                    }
+
+                    geometry_msgs::msg::PoseStamped goal_pose;
+                    goal_pose.header.frame_id = "map";
+                    goal_pose.header.stamp = rclcpp::Clock().now();
+                    if (item.contains("coords") && item["coords"].is_object()) {
+                        const auto& coords = item["coords"];
+                        goal_pose.pose.position.x = coords["x"].get<double>();
+                        goal_pose.pose.position.y = coords["y"].get<double>();
+                        goal_pose.pose.position.z = coords["z"].get<double>();
+                    } else {
+                        goal_pose.pose.position.x = 0.0;
+                        goal_pose.pose.position.y = 0.0;
+                        goal_pose.pose.position.z = 0.0;
+                    }
+                    goal_pose.pose.orientation.w = 1.0;
+                    goal_pose.pose.orientation.x = 0.0;
+                    goal_pose.pose.orientation.y = 0.0;
+                    goal_pose.pose.orientation.z = 0.0;
+                    goal_poses.push_back(goal_pose);
                 }
             }
         }
         setOutput("candidates_ids", candidates);
+        setOutput("similarity_scores", similarity_scores);
+        setOutput("goal_poses", goal_poses);
 
-        // --- EXTRACT: Clip Prompt ---
-        // Maps to "clip_prompt" (which is a list of strings)
+        // --- EXTRACT: Clip Prompts ---
+        // Maps to "clip_prompts" (which is a list of strings)
         std::vector<std::string> prompts;
-        if (data.contains("clip_prompt") && data["clip_prompt"].is_array()) {
+        if (data.contains("clip_prompts") && data["clip_prompts"].is_array()) {
+            for (const auto& item : data["clip_prompts"]) {
+                prompts.push_back(item.get<std::string>());
+            }
+        } else if (data.contains("clip_prompt") && data["clip_prompt"].is_array()) {
             for (const auto& item : data["clip_prompt"]) {
                 prompts.push_back(item.get<std::string>());
             }

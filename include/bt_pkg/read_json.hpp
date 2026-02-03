@@ -23,6 +23,8 @@ public:
             
             // Outputs: Data for the rest of the tree
             BT::OutputPort<std::vector<std::string>>("candidates_ids"),
+            BT::OutputPort<std::vector<double>>("similarity_scores"),
+            BT::OutputPort<std::vector<geometry_msgs::msg::PoseStamped>>("goal_poses"),
             BT::OutputPort<std::vector<std::string>>("prompt"), 
             BT::OutputPort<int>("cluster"),
             BT::OutputPort<geometry_msgs::msg::PoseStamped>("cluster_centroid")
