@@ -83,6 +83,7 @@ BT::NodeStatus ReadJson::tick()
         // New schema: cluster_info contains cluster_id and coords
         int cluster_id_value = -1;
         geometry_msgs::msg::PoseStamped cluster_centroid;
+        std::string cluster_dimensions_str = "";
         
         if (data.contains("cluster_info") && data["cluster_info"].is_object()) {
             const auto& ci = data["cluster_info"];
@@ -97,7 +98,7 @@ BT::NodeStatus ReadJson::tick()
                 cluster_centroid.header.stamp = rclcpp::Clock().now();
                 cluster_centroid.pose.position.x = coords["x"].get<double>();
                 cluster_centroid.pose.position.y = coords["y"].get<double>();
-                cluster_centroid.pose.position.z = coords["z"].get<double>();
+                cluster_centroid.pose.position.z = coords.contains("z") ? coords["z"].get<double>() : 0.0;
                 // Default orientation (identity quaternion)
                 cluster_centroid.pose.orientation.w = 1.0;
                 cluster_centroid.pose.orientation.x = 0.0;
@@ -107,6 +108,11 @@ BT::NodeStatus ReadJson::tick()
                 std::cerr << "[ReadJson] Error: Missing cluster_info.coords" << std::endl;
                 return BT::NodeStatus::FAILURE;
             }
+            
+            // Extract cluster dimensions as JSON string for future use
+            if (ci.contains("dimensions")) {
+                cluster_dimensions_str = ci["dimensions"].dump();
+            }
         }
         if (cluster_id_value < 0) {
             std::cerr << "[ReadJson] Error: Missing cluster_info.cluster_id" << std::endl;
@@ -114,6 +120,7 @@ BT::NodeStatus ReadJson::tick()
         }
         setOutput("cluster", cluster_id_value);
         setOutput("cluster_centroid", cluster_centroid);
+        setOutput("cluster_dimensions", cluster_dimensions_str);
 
         std::cout << "[ReadJson] Successfully parsed command. Found " 
               << candidates.size() << " candidates and set cluster centroid at (" 

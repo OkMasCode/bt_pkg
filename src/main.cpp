@@ -8,6 +8,7 @@
 #include "bt_pkg/navigate_to_pose.hpp"
 #include "bt_pkg/find_approach_pose.hpp"
 #include "bt_pkg/check_is_object.hpp"
+#include "bt_pkg/rotate_360.hpp"
 
 int main(int argc, char **argv)
 {
@@ -28,6 +29,7 @@ int main(int argc, char **argv)
     factory.registerNodeType<NavigateToPose>("NavigateToPose");
     factory.registerNodeType<FindApproachPose>("FindApproachPose");
     factory.registerNodeType<CheckIsObject>("CheckIsObject");
+    factory.registerNodeType<Rotate360>("Rotate360");
     // 3. SETUP BLACKBOARD (Crucial for Service Clients)
     // Your CallCheckCandidates needs a ROS node to create_client().
     // We pass it via the Blackboard.
@@ -43,9 +45,20 @@ int main(int argc, char **argv)
 
         // Simple Tick Loop (10Hz)
         rclcpp::Rate rate(10);
+        BT::NodeStatus status = BT::NodeStatus::RUNNING;
+        
         while (rclcpp::ok())
         {
-            tree.tickOnce();
+            status = tree.tickOnce();
+            
+            if (status == BT::NodeStatus::SUCCESS) {
+                RCLCPP_INFO(node->get_logger(), "Behavior Tree completed successfully!");
+                break;
+            } else if (status == BT::NodeStatus::FAILURE) {
+                RCLCPP_WARN(node->get_logger(), "Behavior Tree failed, retrying...");
+                // Tree will be ticked again on next iteration
+            }
+            
             rclcpp::spin_some(node); // Handle ROS callbacks (replies from service)
             rate.sleep();
         }

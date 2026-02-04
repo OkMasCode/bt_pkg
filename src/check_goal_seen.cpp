@@ -54,13 +54,17 @@ BT::NodeStatus CallCheckCandidates::tick()
     }
 
     if (best_score >= similarity_threshold) {
-        RCLCPP_INFO(node->get_logger(), "Selecting goal pose (score=%.2f >= %.2f)",
-                    best_score, similarity_threshold);
+        RCLCPP_INFO(node->get_logger(), "Selecting goal pose (score=%.2f >= %.2f) at (%.2f, %.2f)",
+                    best_score, similarity_threshold,
+                    goal_poses[best_idx].pose.position.x,
+                    goal_poses[best_idx].pose.position.y);
         setOutput("target_pose", goal_poses[best_idx]);
         setOutput("is_object_goal", true);
     } else {
-        RCLCPP_INFO(node->get_logger(), "Selecting cluster centroid (score=%.2f < %.2f)",
-                    best_score, similarity_threshold);
+        RCLCPP_INFO(node->get_logger(), "Selecting cluster centroid (score=%.2f < %.2f) at (%.2f, %.2f)",
+                    best_score, similarity_threshold,
+                    cluster_centroid.pose.position.x,
+                    cluster_centroid.pose.position.y);
         setOutput("target_pose", cluster_centroid);
         setOutput("is_object_goal", false);
     }

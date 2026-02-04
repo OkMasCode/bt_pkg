@@ -11,6 +11,7 @@
                 prompt="{clip_prompt}" 
                 cluster="{cluster}" 
                 cluster_centroid="{cluster_centroid}"
+                cluster_dimensions="{cluster_dimensions}"
             />
 
             <Sequence name="DecideAndNavigate">
@@ -31,7 +32,7 @@
                             goal_pose="{target_pose}"
                             approach_pose="{approach_pose}"
                             costmap_topic="/global_costmap/costmap"
-                            min_radius="1.5"
+                            min_radius="0.0"
                             max_radius="2.5"
                             radius_step="0.1"
                             angle_step_deg="20.0"
@@ -40,8 +41,19 @@
                         <NavigateToPose goal="{approach_pose}"/>
                     </Sequence>
 
-                    <Sequence name="NavigateToCentroid">
-                        <NavigateToPose goal="{target_pose}"/>
+                    <Sequence name="ExploreCluster">
+                        <FindApproachPose
+                            goal_pose="{cluster_centroid}"
+                            approach_pose="{exploration_pose}"
+                            costmap_topic="/global_costmap/costmap"
+                            min_radius="0.0"
+                            max_radius="3.0"
+                            radius_step="0.1"
+                            angle_step_deg="20.0"
+                            free_threshold="0"
+                        />
+                        <NavigateToPose goal="{exploration_pose}"/>
+                        <Rotate360 angle_increment="10.0"/>
                     </Sequence>
                 </Fallback>
             </Sequence>
@@ -59,6 +71,7 @@
             <output_port name="prompt"/>
             <output_port name="cluster"/>
             <output_port name="cluster_centroid"/>
+            <output_port name="cluster_dimensions"/>
         </Action>
         <Action ID="CallCheckCandidates">
             <input_port name="candidates_ids"/>
@@ -85,5 +98,8 @@
         <Condition ID="CheckIsObject">
             <input_port name="is_object"/>
         </Condition>
+        <Action ID="Rotate360">
+            <input_port name="angle_increment"/>
+        </Action>
     </TreeNodesModel>
 </root>

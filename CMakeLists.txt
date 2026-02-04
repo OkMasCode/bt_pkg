@@ -34,6 +34,7 @@ add_executable(bt_manager
   src/check_goal_seen.cpp
   src/navigate_to_pose.cpp
   src/find_approach_pose.cpp
+  src/rotate_360.cpp
 )
 
 # Link the executable to the found libraries
