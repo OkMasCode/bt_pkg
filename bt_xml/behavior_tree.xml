@@ -12,6 +12,13 @@
                 cluster="{cluster}" 
                 cluster_centroid="{cluster_centroid}"
                 cluster_dimensions="{cluster_dimensions}"
+                action="{robot_action}"
+            />
+
+            <GetRobotStartPose 
+                start_pose="{start_pose}"
+                tf_topic="/tf"
+                frame_id="base_link"
             />
 
             <Sequence name="DecideAndNavigate">
@@ -72,6 +79,12 @@
             <output_port name="cluster"/>
             <output_port name="cluster_centroid"/>
             <output_port name="cluster_dimensions"/>
+            <output_port name="action"/>
+        </Action>
+        <Action ID="GetRobotStartPose">
+            <input_port name="tf_topic"/>
+            <input_port name="frame_id"/>
+            <output_port name="start_pose"/>
         </Action>
         <Action ID="CallCheckCandidates">
             <input_port name="candidates_ids"/>

@@ -79,6 +79,13 @@ BT::NodeStatus ReadJson::tick()
         setOutput("prompt", prompts);
 
 
+        // --- EXTRACT: Action ---
+        std::string action = "";
+        if (data.contains("action") && data["action"].is_string()) {
+            action = data["action"].get<std::string>();
+        }
+        setOutput("action", action);
+
         // --- EXTRACT: Cluster ID and Centroid ---
         // New schema: cluster_info contains cluster_id and coords
         int cluster_id_value = -1;
