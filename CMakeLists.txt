@@ -22,6 +22,8 @@ find_package(nav2_msgs REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(yolo11_seg_interfaces REQUIRED)
 find_package(nav2_behavior_tree REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 
 # ==========================================
 # 2. BUILD THE EXECUTABLE
@@ -34,6 +36,7 @@ add_executable(bt_manager
   src/check_goal_seen.cpp
   src/navigate_to_pose.cpp
   src/find_approach_pose.cpp
+  src/get_robot_start_pose.cpp
   src/rotate_360.cpp
 )
 
@@ -47,6 +50,8 @@ ament_target_dependencies(bt_manager
   nav2_msgs
   nlohmann_json
   yolo11_seg_interfaces
+  tf2_ros
+  tf2_geometry_msgs
 )
 
 # Tell the compiler where the header (.hpp) files are located

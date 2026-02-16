@@ -86,6 +86,7 @@ BT::NodeStatus ReadJson::tick()
         }
         setOutput("action", action);
 
+
         // --- EXTRACT: Cluster ID and Centroid ---
         // New schema: cluster_info contains cluster_id and coords
         int cluster_id_value = -1;

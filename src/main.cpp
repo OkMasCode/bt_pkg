@@ -8,6 +8,7 @@
 #include "bt_pkg/navigate_to_pose.hpp"
 #include "bt_pkg/find_approach_pose.hpp"
 #include "bt_pkg/check_is_object.hpp"
+#include "bt_pkg/check_action.hpp"
 #include "bt_pkg/rotate_360.hpp"
 #include "bt_pkg/get_robot_start_pose.hpp"
 
@@ -30,6 +31,7 @@ int main(int argc, char **argv)
     factory.registerNodeType<NavigateToPose>("NavigateToPose");
     factory.registerNodeType<FindApproachPose>("FindApproachPose");
     factory.registerNodeType<CheckIsObject>("CheckIsObject");
+    factory.registerNodeType<CheckAction>("CheckAction");
     factory.registerNodeType<Rotate360>("Rotate360");
     factory.registerNodeType<GetRobotStartPose>("GetRobotStartPose");
     // 3. SETUP BLACKBOARD (Crucial for Service Clients)

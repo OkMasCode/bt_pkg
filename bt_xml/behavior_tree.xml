@@ -3,6 +3,7 @@
     <BehaviorTree ID="MainTree">
 
         <Sequence name="MissionPipeline">
+
             <ReadJson 
                 file_path="/workspaces/ros2_ws/src/yolo11_seg_bringup/config/robot_command.json"
                 candidates_ids="{candidates}" 
@@ -22,6 +23,7 @@
             />
 
             <Sequence name="DecideAndNavigate">
+
                 <CallCheckCandidates 
                     candidates_ids="{candidates}" 
                     similarity_scores="{similarity_scores}"
@@ -33,22 +35,11 @@
                 />
                 
                 <Fallback name="ChooseNavigationStrategy">
-                    <Sequence name="NavigateToObject">
-                        <CheckIsObject is_object="{is_object}"/>
-                        <FindApproachPose
-                            goal_pose="{target_pose}"
-                            approach_pose="{approach_pose}"
-                            costmap_topic="/global_costmap/costmap"
-                            min_radius="0.0"
-                            max_radius="2.5"
-                            radius_step="0.1"
-                            angle_step_deg="20.0"
-                            free_threshold="0"
-                        />
-                        <NavigateToPose goal="{approach_pose}"/>
-                    </Sequence>
+
+                    <CheckIsObject is_object="{is_object}"/>
 
                     <Sequence name="ExploreCluster">
+
                         <FindApproachPose
                             goal_pose="{cluster_centroid}"
                             approach_pose="{exploration_pose}"
@@ -59,10 +50,44 @@
                             angle_step_deg="20.0"
                             free_threshold="0"
                         />
+
                         <NavigateToPose goal="{exploration_pose}"/>
+
                         <Rotate360 angle_increment="10.0"/>
+
                     </Sequence>
+
                 </Fallback>
+
+                <Sequence name="NavigateToGoal">
+
+                        <FindApproachPose
+                            goal_pose="{target_pose}"
+                            approach_pose="{approach_pose}"
+                            costmap_topic="/global_costmap/costmap"
+                            min_radius="0.0"
+                            max_radius="3.0"
+                            radius_step="0.1"
+                            angle_step_deg="20.0"
+                            free_threshold="0"
+                        />
+
+                        <NavigateToPose goal="{approach_pose}"/>
+
+                </Sequence>
+
+                <Fallback name="PostArrivalLogic">
+
+                    <Sequence name="BringBackObject">
+
+                        <CheckAction action="{robot_action}"/>
+
+                        <NavigateToPose goal="{start_pose}"/>
+
+                    </Sequence>
+
+                </Fallback>
+
             </Sequence>
 
         </Sequence>
@@ -110,6 +135,9 @@
         </Action>
         <Condition ID="CheckIsObject">
             <input_port name="is_object"/>
+        </Condition>
+        <Condition ID="CheckAction">
+            <input_port name="action"/>
         </Condition>
         <Action ID="Rotate360">
             <input_port name="angle_increment"/>
