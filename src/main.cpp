@@ -14,18 +14,16 @@
 
 int main(int argc, char **argv)
 {
-    // A. Initialize ROS 2 (Standard)
+    // Initialize ROS 2 runtime.
     rclcpp::init(argc, argv);
     
-    // Create the ROS node. 
-    // This node will handle the communication for the Service Client.
+    // Shared node used by BT leaf nodes for ROS APIs (actions, pubs/subs, TF, etc.).
     auto node = std::make_shared<rclcpp::Node>("bt_manager");
 
-    // B. Initialize the Factory
+    // Create BehaviorTree.CPP factory and register all custom leaf nodes.
     BT::BehaviorTreeFactory factory;
 
-    // 2. REGISTER YOUR LEAF
-    // The string "CallCheckCandidates" MUST match the tag name in your XML file.
+    // Tag names must match node IDs used in the XML tree.
     factory.registerNodeType<ReadJson>("ReadJson");
     factory.registerNodeType<CallCheckCandidates>("CallCheckCandidates");
     factory.registerNodeType<NavigateToPose>("NavigateToPose");
@@ -34,20 +32,19 @@ int main(int argc, char **argv)
     factory.registerNodeType<CheckAction>("CheckAction");
     factory.registerNodeType<Rotate360>("Rotate360");
     factory.registerNodeType<GetRobotStartPose>("GetRobotStartPose");
-    // 3. SETUP BLACKBOARD (Crucial for Service Clients)
-    // Your CallCheckCandidates needs a ROS node to create_client().
-    // We pass it via the Blackboard.
+
+    // Configure blackboard entries shared by all BT nodes.
     auto blackboard = BT::Blackboard::create();
     blackboard->set<rclcpp::Node::SharedPtr>("node", node);
 
-    // C. Load and Run the Tree
+    // Absolute path to BT XML definition.
     std::string xml_path = "/workspaces/ros2_ws/src/bt_pkg/bt_xml/behavior_tree.xml";
     
     try {
-        // Create the tree using the blackboard we just configured
+        // Instantiate tree with the configured blackboard.
         auto tree = factory.createTreeFromFile(xml_path, blackboard);
 
-        // Simple Tick Loop (10Hz)
+        // Tick loop at 10 Hz until success, failure retry, or ROS shutdown.
         rclcpp::Rate rate(10);
         BT::NodeStatus status = BT::NodeStatus::RUNNING;
         
@@ -56,21 +53,25 @@ int main(int argc, char **argv)
             status = tree.tickOnce();
             
             if (status == BT::NodeStatus::SUCCESS) {
+                // Mission complete.
                 RCLCPP_INFO(node->get_logger(), "Behavior Tree completed successfully!");
                 break;
             } else if (status == BT::NodeStatus::FAILURE) {
+                // Keep ticking to allow recovery/fallback branches on next cycle.
                 RCLCPP_WARN(node->get_logger(), "Behavior Tree failed, retrying...");
-                // Tree will be ticked again on next iteration
             }
             
-            rclcpp::spin_some(node); // Handle ROS callbacks (replies from service)
+            // Process ROS callbacks required by asynchronous BT nodes.
+            rclcpp::spin_some(node);
             rate.sleep();
         }
     }
     catch (const std::exception& ex) {
+        // Covers XML load/parse errors and runtime tree construction issues.
         RCLCPP_ERROR(node->get_logger(), "Tree Error: %s", ex.what());
     }
 
+    // Clean shutdown.
     rclcpp::shutdown();
     return 0;
 }

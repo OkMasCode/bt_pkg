@@ -4,7 +4,7 @@
 
 BT::NodeStatus GetRobotStartPose::tick()
 {
-    // Get input ports
+    // Read required frame input used for TF lookup.
     std::string frame_id;
     if (!getInput("frame_id", frame_id)) {
         std::cerr << "[GetRobotStartPose] Error: Missing frame_id input" << std::endl;
@@ -12,20 +12,20 @@ BT::NodeStatus GetRobotStartPose::tick()
     }
 
     try {
-        // Try to get the transform from map to the robot's frame
+        // Query transform from map frame to the robot frame at latest available time.
         auto transform = tf_buffer_->lookupTransform("map", frame_id, tf2::TimePointZero);
 
-        // Create PoseStamped from the transform
+        // Build output pose message in map frame.
         geometry_msgs::msg::PoseStamped start_pose;
         start_pose.header.frame_id = "map";
         start_pose.header.stamp = transform.header.stamp;
         
-        // Extract position from transform
+        // Copy translation component.
         start_pose.pose.position.x = transform.transform.translation.x;
         start_pose.pose.position.y = transform.transform.translation.y;
         start_pose.pose.position.z = transform.transform.translation.z;
         
-        // Extract orientation from transform
+        // Copy orientation component.
         start_pose.pose.orientation = tf2::toMsg(tf2::Quaternion(
             transform.transform.rotation.x,
             transform.transform.rotation.y,
@@ -33,7 +33,7 @@ BT::NodeStatus GetRobotStartPose::tick()
             transform.transform.rotation.w
         ));
 
-        // Set the output port
+        // Publish pose to BT blackboard output.
         setOutput("start_pose", start_pose);
 
         std::cout << "[GetRobotStartPose] Successfully captured robot start pose at (" 
@@ -44,10 +44,12 @@ BT::NodeStatus GetRobotStartPose::tick()
         return BT::NodeStatus::SUCCESS;
     }
     catch (const tf2::TransformException& e) {
+        // TF lookup failures (missing frames, timeout, etc.).
         std::cerr << "[GetRobotStartPose] TF Error: " << e.what() << std::endl;
         return BT::NodeStatus::FAILURE;
     }
     catch (const std::exception& e) {
+        // Fallback for unexpected runtime errors.
         std::cerr << "[GetRobotStartPose] Error: " << e.what() << std::endl;
         return BT::NodeStatus::FAILURE;
     }

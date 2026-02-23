@@ -3,14 +3,14 @@
 
 BT::NodeStatus ReadJson::tick()
 {
-    // 1. Get the file path from the Input Port
+    // Read input path to the JSON command file.
     std::string file_path;
     if (!getInput("file_path", file_path)) {
         std::cerr << "[ReadJson] Error: Missing file_path input" << std::endl;
         return BT::NodeStatus::FAILURE;
     }
 
-    // 2. Open the File
+    // Open file stream.
     std::ifstream f(file_path);
     if (!f.is_open()) {
         std::cerr << "[ReadJson] Error: Could not open file at " << file_path << std::endl;
@@ -18,11 +18,10 @@ BT::NodeStatus ReadJson::tick()
     }
 
     try {
-        // 3. Parse JSON using nlohmann library
+        // Parse JSON document.
         json data = json::parse(f);
 
-        // --- EXTRACT: Candidate IDs + Similarity Scores ---
-        // New schema: "goal_objects" is an array of objects { id, similarity_score, coords }
+        // Extract candidates from schema: goal_objects[] = { id, similarity_score, coords }.
         std::vector<std::string> candidates;
         std::vector<double> similarity_scores;
         std::vector<geometry_msgs::msg::PoseStamped> goal_poses;
@@ -30,12 +29,14 @@ BT::NodeStatus ReadJson::tick()
             for (const auto& item : data["goal_objects"]) {
                 if (item.is_object() && item.contains("id")) {
                     candidates.push_back(item["id"].get<std::string>());
+                    // Missing similarity defaults to 0.0.
                     if (item.contains("similarity_score") && item["similarity_score"].is_number()) {
                         similarity_scores.push_back(item["similarity_score"].get<double>());
                     } else {
                         similarity_scores.push_back(0.0);
                     }
 
+                    // Build goal pose in map frame from coords if present.
                     geometry_msgs::msg::PoseStamped goal_pose;
                     goal_pose.header.frame_id = "map";
                     goal_pose.header.stamp = rclcpp::Clock().now();
@@ -57,12 +58,12 @@ BT::NodeStatus ReadJson::tick()
                 }
             }
         }
+        // Publish candidate outputs.
         setOutput("candidates_ids", candidates);
         setOutput("similarity_scores", similarity_scores);
         setOutput("goal_poses", goal_poses);
 
-        // --- EXTRACT: Clip Prompts ---
-        // Maps to "clip_prompts" (which is a list of strings)
+        // Extract CLIP prompts with backward-compatible fallbacks.
         std::vector<std::string> prompts;
         if (data.contains("clip_prompts") && data["clip_prompts"].is_array()) {
             for (const auto& item : data["clip_prompts"]) {
@@ -73,13 +74,13 @@ BT::NodeStatus ReadJson::tick()
                 prompts.push_back(item.get<std::string>());
             }
         } else if (data.contains("prompt") && data["prompt"].is_string()) {
-            // Fallback: single prompt string if clip_prompt not provided
+            // Fallback: single legacy prompt string.
             prompts.push_back(data["prompt"].get<std::string>());
         }
         setOutput("prompt", prompts);
 
 
-        // --- EXTRACT: Action ---
+        // Extract high-level action string.
         std::string action = "";
         if (data.contains("action") && data["action"].is_string()) {
             action = data["action"].get<std::string>();
@@ -87,8 +88,7 @@ BT::NodeStatus ReadJson::tick()
         setOutput("action", action);
 
 
-        // --- EXTRACT: Cluster ID and Centroid ---
-        // New schema: cluster_info contains cluster_id and coords
+        // Extract cluster metadata from schema: cluster_info = { cluster_id, coords, dimensions }.
         int cluster_id_value = -1;
         geometry_msgs::msg::PoseStamped cluster_centroid;
         std::string cluster_dimensions_str = "";
@@ -99,7 +99,7 @@ BT::NodeStatus ReadJson::tick()
                 cluster_id_value = ci["cluster_id"].get<int>();
             }
             
-            // Extract centroid coordinates
+            // Centroid coordinates are required for downstream navigation.
             if (ci.contains("coords") && ci["coords"].is_object()) {
                 const auto& coords = ci["coords"];
                 cluster_centroid.header.frame_id = "map";
@@ -107,7 +107,7 @@ BT::NodeStatus ReadJson::tick()
                 cluster_centroid.pose.position.x = coords["x"].get<double>();
                 cluster_centroid.pose.position.y = coords["y"].get<double>();
                 cluster_centroid.pose.position.z = coords.contains("z") ? coords["z"].get<double>() : 0.0;
-                // Default orientation (identity quaternion)
+                // Use identity orientation by default.
                 cluster_centroid.pose.orientation.w = 1.0;
                 cluster_centroid.pose.orientation.x = 0.0;
                 cluster_centroid.pose.orientation.y = 0.0;
@@ -117,11 +117,12 @@ BT::NodeStatus ReadJson::tick()
                 return BT::NodeStatus::FAILURE;
             }
             
-            // Extract cluster dimensions as JSON string for future use
+            // Store dimensions as raw JSON string for downstream consumers.
             if (ci.contains("dimensions")) {
                 cluster_dimensions_str = ci["dimensions"].dump();
             }
         }
+        // cluster_id is mandatory for validity.
         if (cluster_id_value < 0) {
             std::cerr << "[ReadJson] Error: Missing cluster_info.cluster_id" << std::endl;
             return BT::NodeStatus::FAILURE;

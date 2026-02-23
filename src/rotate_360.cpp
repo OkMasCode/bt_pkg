@@ -2,13 +2,13 @@
 
 BT::NodeStatus Rotate360::onStart()
 {
-    // Get the ROS node from blackboard
+    // Retrieve ROS node from blackboard.
     auto node = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
     
-    // Create publisher for cmd_vel
+    // Create velocity publisher used during rotation.
     cmd_vel_publisher_ = node->create_publisher<geometry_msgs::msg::Twist>("/cmd_vel", 10);
     
-    // Get angle increment (not used in simple time-based approach, but available for future)
+    // Validate configured input port (currently not used by time-based implementation).
     auto angle_inc = getInput<double>("angle_increment");
     if (!angle_inc)
     {
@@ -16,7 +16,7 @@ BT::NodeStatus Rotate360::onStart()
         return BT::NodeStatus::FAILURE;
     }
     
-    // Record start time
+    // Initialize rotation state.
     start_time_ = node->now();
     total_rotation_deg_ = 0.0;
     rotation_complete_ = false;
@@ -31,16 +31,16 @@ BT::NodeStatus Rotate360::onRunning()
 {
     auto node = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
     
-    // Calculate time elapsed
+    // Compute elapsed time since start.
     auto current_time = node->now();
     double elapsed_sec = (current_time - start_time_).seconds();
     
-    // Calculate how much we've rotated (in degrees)
+    // Convert elapsed time to estimated rotation angle.
     total_rotation_deg_ = elapsed_sec * angular_velocity_ * (180.0 / M_PI);
     
     if (total_rotation_deg_ >= 360.0)
     {
-        // Stop rotation
+        // Full turn reached: stop and return success.
         auto stop_msg = geometry_msgs::msg::Twist();
         stop_msg.angular.z = 0.0;
         cmd_vel_publisher_->publish(stop_msg);
@@ -51,7 +51,7 @@ BT::NodeStatus Rotate360::onRunning()
         return BT::NodeStatus::SUCCESS;
     }
     
-    // Continue rotating
+    // Keep rotating in place (counter-clockwise, +Z).
     auto twist_msg = geometry_msgs::msg::Twist();
     twist_msg.linear.x = 0.0;
     twist_msg.linear.y = 0.0;
@@ -62,7 +62,7 @@ BT::NodeStatus Rotate360::onRunning()
     
     cmd_vel_publisher_->publish(twist_msg);
     
-    // Log progress every 2 seconds
+    // Periodic progress logging.
     if (static_cast<int>(elapsed_sec) % 2 == 0 && elapsed_sec > 0.1)
     {
         RCLCPP_INFO_THROTTLE(node->get_logger(), *node->get_clock(), 2000,
@@ -76,7 +76,7 @@ void Rotate360::onHalted()
 {
     auto node = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
     
-    // Stop the robot immediately
+    // Halt callback: stop robot immediately.
     auto stop_msg = geometry_msgs::msg::Twist();
     stop_msg.angular.z = 0.0;
     cmd_vel_publisher_->publish(stop_msg);

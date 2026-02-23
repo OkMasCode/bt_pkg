@@ -2,6 +2,7 @@
 
 BT::NodeStatus CallCheckCandidates::tick()
 {
+    // Retrieve ROS node handle from the BT blackboard for logging and runtime context.
     auto node = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
     if (!node) {
         throw std::runtime_error("Missing ROS Node in Blackboard");
@@ -13,6 +14,7 @@ BT::NodeStatus CallCheckCandidates::tick()
     geometry_msgs::msg::PoseStamped cluster_centroid;
     double similarity_threshold = 0.0;
 
+    // Read required inputs that describe candidate object matches and corresponding poses.
     if (!getInput("candidates_ids", candidates_ids)) {
         RCLCPP_ERROR(node->get_logger(), "Missing candidates_ids input");
         return BT::NodeStatus::FAILURE;
@@ -29,14 +31,17 @@ BT::NodeStatus CallCheckCandidates::tick()
         RCLCPP_ERROR(node->get_logger(), "Missing cluster_centroid input");
         return BT::NodeStatus::FAILURE;
     }
+    // Optional threshold: defaults to 0.0 if not provided.
     getInput("similarity_threshold", similarity_threshold);
 
+    // If perception outputs are empty, fall back to exploring the cluster centroid.
     if (candidates_ids.empty() || similarity_scores.empty() || goal_poses.empty()) {
         RCLCPP_WARN(node->get_logger(), "Empty candidates/similarity/poses. Using cluster centroid.");
         setOutput("target_pose", cluster_centroid);
         return BT::NodeStatus::SUCCESS;
     }
 
+    // Guard against inconsistent vectors; otherwise indexing could be unsafe.
     if (similarity_scores.size() != goal_poses.size()) {
         RCLCPP_WARN(node->get_logger(), "Mismatch sizes: similarity_scores=%zu, goal_poses=%zu. Using cluster centroid.",
                     similarity_scores.size(), goal_poses.size());
@@ -44,6 +49,7 @@ BT::NodeStatus CallCheckCandidates::tick()
         return BT::NodeStatus::SUCCESS;
     }
 
+    // Select the highest-similarity candidate.
     size_t best_idx = 0;
     double best_score = similarity_scores[0];
     for (size_t i = 1; i < similarity_scores.size(); ++i) {
@@ -53,6 +59,7 @@ BT::NodeStatus CallCheckCandidates::tick()
         }
     }
 
+    // Use object pose only when confidence is above threshold; otherwise use centroid.
     if (best_score >= similarity_threshold) {
         RCLCPP_INFO(node->get_logger(), "Selecting goal pose (score=%.2f >= %.2f) at (%.2f, %.2f)",
                     best_score, similarity_threshold,

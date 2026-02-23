@@ -11,6 +11,7 @@ using Nav2Action = nav2_msgs::action::NavigateToPose;
 using Nav2Client = rclcpp_action::Client<Nav2Action>;
 using GoalHandleNav = rclcpp_action::ClientGoalHandle<Nav2Action>;
 
+// Stateful BT node that sends a Nav2 goal and tracks completion asynchronously.
 class NavigateToPose : public BT::StatefulActionNode
 {
 public:
@@ -21,25 +22,26 @@ public:
     static BT::PortsList providedPorts()
     {
         return {
-            // INPUT: The target coordinate (from "CallCheckCandidates" or "SelectCluster")
+            // Target pose to send to Nav2.
             BT::InputPort<geometry_msgs::msg::PoseStamped>("goal")
         };
     }
 
-    // Standard V4 Stateful Methods
+    // BT lifecycle callbacks for stateful execution.
     BT::NodeStatus onStart() override;
     BT::NodeStatus onRunning() override;
     void onHalted() override;
 
 private:
+    // Nav2 action client instance.
     Nav2Client::SharedPtr action_client_;
     
-    // Future 1: Waiting for the server to say "I accept this goal"
+    // Future for goal-acceptance response.
     std::shared_future<GoalHandleNav::SharedPtr> future_goal_handle_;
     
-    // Future 2: Waiting for the robot to say "I arrived"
+    // Future for final navigation result.
     std::shared_future<GoalHandleNav::WrappedResult> future_result_;
     
-    // The active goal handle (needed to cancel if we stop)
+    // Active goal handle, used for cancellation on halt.
     GoalHandleNav::SharedPtr goal_handle_;
 };

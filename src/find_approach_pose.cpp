@@ -4,10 +4,12 @@
 
 void FindApproachPose::ensureSubscription(const rclcpp::Node::SharedPtr& node, const std::string& topic)
 {
+    // Reuse existing subscription when topic has not changed.
     if (costmap_sub_ && topic == last_topic_) {
         return;
     }
 
+    // (Re)subscribe and cache the latest costmap for future ticks.
     last_topic_ = topic;
     costmap_sub_ = node->create_subscription<nav_msgs::msg::OccupancyGrid>(
         topic, rclcpp::QoS(1).transient_local().reliable(),
@@ -18,6 +20,7 @@ void FindApproachPose::ensureSubscription(const rclcpp::Node::SharedPtr& node, c
 
 bool FindApproachPose::isFree(const nav_msgs::msg::OccupancyGrid& grid, double wx, double wy, int free_threshold) const
 {
+    // Convert world coordinates into costmap index space.
     const double origin_x = grid.info.origin.position.x;
     const double origin_y = grid.info.origin.position.y;
     const double resolution = grid.info.resolution;
@@ -38,6 +41,7 @@ bool FindApproachPose::isFree(const nav_msgs::msg::OccupancyGrid& grid, double w
         return false;
     }
 
+    // Unknown cells are treated as not free for safety.
     const int8_t occ = grid.data[idx];
     if (occ < 0) {
         return false; // unknown treated as not free
@@ -48,17 +52,20 @@ bool FindApproachPose::isFree(const nav_msgs::msg::OccupancyGrid& grid, double w
 
 BT::NodeStatus FindApproachPose::tick()
 {
+    // Retrieve ROS node from blackboard for logging/subscriptions/time.
     auto node = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
     if (!node) {
         throw std::runtime_error("Missing ROS Node in Blackboard");
     }
 
+    // Required target pose input.
     geometry_msgs::msg::PoseStamped goal_pose;
     if (!getInput("goal_pose", goal_pose)) {
         RCLCPP_ERROR(node->get_logger(), "Missing goal_pose input");
         return BT::NodeStatus::FAILURE;
     }
 
+    // Optional parameters with defaults.
     std::string costmap_topic = "/global_costmap/costmap";
     getInput("costmap_topic", costmap_topic);
 
@@ -74,6 +81,7 @@ BT::NodeStatus FindApproachPose::tick()
     getInput("angle_step_deg", angle_step_deg);
     getInput("free_threshold", free_threshold);
 
+    // Validate sampling configuration before planning candidates.
     if (min_radius < 0.0 || max_radius < min_radius || radius_step <= 0.0 || angle_step_deg <= 0.0) {
         RCLCPP_ERROR(node->get_logger(), "Invalid sampling parameters");
         return BT::NodeStatus::FAILURE;
@@ -81,6 +89,7 @@ BT::NodeStatus FindApproachPose::tick()
 
     ensureSubscription(node, costmap_topic);
 
+    // Wait until at least one costmap has been received.
     if (!last_costmap_) {
         RCLCPP_WARN(node->get_logger(), "No costmap received yet on %s", costmap_topic.c_str());
         return BT::NodeStatus::FAILURE;
@@ -93,6 +102,7 @@ BT::NodeStatus FindApproachPose::tick()
     geometry_msgs::msg::PoseStamped approach_pose;
     bool found = false;
 
+    // Search concentric rings around the goal and pick the first free sampled point.
     for (double r = min_radius; r <= max_radius && !found; r += radius_step) {
         for (double a = 0.0; a < 360.0; a += angle_step_deg) {
             const double rad = a * M_PI / 180.0;
@@ -109,6 +119,7 @@ BT::NodeStatus FindApproachPose::tick()
             approach_pose.pose.position.y = cy;
             approach_pose.pose.position.z = goal_pose.pose.position.z;
 
+            // Orient approach pose to face the goal.
             const double yaw = std::atan2(goal_y - cy, goal_x - cx);
             approach_pose.pose.orientation.x = 0.0;
             approach_pose.pose.orientation.y = 0.0;
@@ -125,6 +136,7 @@ BT::NodeStatus FindApproachPose::tick()
         return BT::NodeStatus::FAILURE;
     }
 
+    // Publish selected approach pose to the BT blackboard.
     setOutput("approach_pose", approach_pose);
     return BT::NodeStatus::SUCCESS;
 }

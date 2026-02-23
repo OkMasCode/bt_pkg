@@ -8,6 +8,7 @@
 
 using json = nlohmann::json;
 
+// Synchronous BT action that parses a command JSON file and publishes fields to blackboard ports.
 class ReadJson : public BT::SyncActionNode
 {
 public:
@@ -18,21 +19,24 @@ public:
     static BT::PortsList providedPorts()
     {
         return {
-            // Input: Path to the file
+            // Absolute/relative path to the JSON command file.
             BT::InputPort<std::string>("file_path"),
             
-            // Outputs: Data for the rest of the tree
+            // Candidate objects and scores extracted from goal_objects.
             BT::OutputPort<std::vector<std::string>>("candidates_ids"),
             BT::OutputPort<std::vector<double>>("similarity_scores"),
             BT::OutputPort<std::vector<geometry_msgs::msg::PoseStamped>>("goal_poses"),
+            // CLIP prompts to evaluate.
             BT::OutputPort<std::vector<std::string>>("prompt"), 
+            // Selected cluster metadata.
             BT::OutputPort<int>("cluster"),
             BT::OutputPort<geometry_msgs::msg::PoseStamped>("cluster_centroid"),
             BT::OutputPort<std::string>("cluster_dimensions"),
+            // High-level task action (e.g., bring_back_object).
             BT::OutputPort<std::string>("action")
         };
     }
 
-    // Since it is SyncActionNode, we just override tick(), not onStart/onRunning
+    // Executes parsing synchronously and writes all outputs in one tick.
     BT::NodeStatus tick() override;
 };
