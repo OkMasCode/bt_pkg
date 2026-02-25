@@ -13,7 +13,7 @@ public:
     GetRobotStartPose(const std::string& name, const BT::NodeConfiguration& config)
       : BT::SyncActionNode(name, config),
         // TF buffer/listener are owned by this node and initialized once at construction.
-        tf_buffer_(std::make_unique<tf2_ros::Buffer>(rclcpp::Clock::System())),
+        tf_buffer_(std::make_unique<tf2_ros::Buffer>(std::make_shared<rclcpp::Clock>(RCL_SYSTEM_TIME))),
         tf_listener_(std::make_unique<tf2_ros::TransformListener>(*tf_buffer_))
     {}
 

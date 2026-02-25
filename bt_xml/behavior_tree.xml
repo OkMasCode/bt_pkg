@@ -29,7 +29,7 @@
                     similarity_scores="{similarity_scores}"
                     goal_poses="{goal_poses}"
                     cluster_centroid="{cluster_centroid}"
-                    similarity_threshold="80.0"
+                    similarity_threshold="8.0"
                     target_pose="{target_pose}"
                     is_object_goal="{is_object}"
                 />
