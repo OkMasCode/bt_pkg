@@ -52,7 +52,6 @@ int main(int argc, char **argv)
         
         while (rclcpp::ok())
         {
-            status = tree.tickOnce();
             
             if (status == BT::NodeStatus::SUCCESS) {
                 // Mission complete.
@@ -63,9 +62,11 @@ int main(int argc, char **argv)
                 RCLCPP_WARN(node->get_logger(), "Behavior Tree failed, retrying...");
             }
             
-            // Process ROS callbacks required by asynchronous BT nodes.
-            rclcpp::spin_some(node);
-            rate.sleep();
+            while (rclcpp::ok()) {
+                rclcpp::spin_some(node); // Update data first
+                status = tree.tickOnce(); // Then make decisions based on that data
+                rate.sleep();
+            }
         }
     }
     catch (const std::exception& ex) {
