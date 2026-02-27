@@ -11,6 +11,7 @@
 #include "bt_pkg/check_action.hpp"
 #include "bt_pkg/rotate_360.hpp"
 #include "bt_pkg/get_robot_start_pose.hpp"
+#include "bt_pkg/check_goal_seen.hpp"
 
 int main(int argc, char **argv)
 {
@@ -32,6 +33,7 @@ int main(int argc, char **argv)
     factory.registerNodeType<CheckAction>("CheckAction");
     factory.registerNodeType<Rotate360>("Rotate360");
     factory.registerNodeType<GetRobotStartPose>("GetRobotStartPose");
+    factory.registerNodeType<CheckGoalSeen>("CheckGoalSeen");
 
     // Configure blackboard entries shared by all BT nodes.
     auto blackboard = BT::Blackboard::create();

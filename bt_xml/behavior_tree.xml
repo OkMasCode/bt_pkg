@@ -57,7 +57,7 @@
 
                             <CheckGoalSeen 
                                 goal_pose = "{target_pose}"
-                                goal_topic = "/detected_object_pose"
+                                goal_topic = "/vision/goal_position"
                             />
 
                             <Repeat num_cycles="-1" name="InfiniteExploration">
@@ -157,10 +157,10 @@
         <Action ID="NavigateToPose">
             <input_port name="goal"/>
         </Action>
-        <Action ID="CheckGoalSeen">
+        <Condition ID="CheckGoalSeen">
             <input_port name="goal_topic"/>
             <output_port name="goal_pose"/>
-        </Action>
+        </Condition>
         <Action ID="GetNextPoint">
             <input_port name="cluster_centroid"/>
             <input_port name="cluster_dimensions"/>
