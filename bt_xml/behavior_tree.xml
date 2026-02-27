@@ -53,7 +53,31 @@
 
                         <NavigateToPose goal="{exploration_pose}"/>
 
-                        <Rotate360 angle_increment="10.0"/>
+                        <ReactiveFallback name="ExploreUntilFound">
+
+                            <CheckGoalSeen 
+                                goal_pose = "{target_pose}"
+                                goal_topic = "/detected_object_pose"
+                            />
+
+                            <Repeat num_cycles="-1" name="InfiniteExploration">
+
+                                <Sequence name="ExplorationStep">
+
+                                    <GetNextPoint 
+                                        next_point="{exploration_pose}"
+                                        cluster_centroid="{cluster_centroid}"
+                                        cluster_dimensions="{cluster_dimensions}"
+                                    />
+
+                                    <NavigateToPose goal="{exploration_pose}"/>
+
+                                    <Rotate360 angle_increment="45.0"/>
+                                    
+                                </Sequence>
+                            </Repeat>
+
+                        </ReactiveFallback>
 
                     </Sequence>
 
@@ -132,6 +156,15 @@
         </Action>
         <Action ID="NavigateToPose">
             <input_port name="goal"/>
+        </Action>
+        <Action ID="CheckGoalSeen">
+            <input_port name="goal_topic"/>
+            <output_port name="goal_pose"/>
+        </Action>
+        <Action ID="GetNextPoint">
+            <input_port name="cluster_centroid"/>
+            <input_port name="cluster_dimensions"/>
+            <output_port name="next_point"/>
         </Action>
         <Condition ID="CheckIsObject">
             <input_port name="is_object"/>
