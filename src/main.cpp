@@ -3,7 +3,7 @@
 
 // 1. INCLUDE YOUR LEAF HEADER
 // (Ensure this file exists in include/my_robot_behavior/)
-#include "bt_pkg/check_goal_seen.hpp"
+#include "bt_pkg/select_goal.hpp"
 #include "bt_pkg/read_json.hpp"
 #include "bt_pkg/navigate_to_pose.hpp"
 #include "bt_pkg/find_approach_pose.hpp"
@@ -25,7 +25,7 @@ int main(int argc, char **argv)
 
     // Tag names must match node IDs used in the XML tree.
     factory.registerNodeType<ReadJson>("ReadJson");
-    factory.registerNodeType<CallCheckCandidates>("CallCheckCandidates");
+    factory.registerNodeType<SelectGoal>("SelectGoal");
     factory.registerNodeType<NavigateToPose>("NavigateToPose");
     factory.registerNodeType<FindApproachPose>("FindApproachPose");
     factory.registerNodeType<CheckIsObject>("CheckIsObject");

@@ -24,7 +24,7 @@
 
             <Sequence name="DecideAndNavigate">
 
-                <CallCheckCandidates 
+                <SelectGoal 
                     candidates_ids="{candidates}" 
                     similarity_scores="{similarity_scores}"
                     goal_poses="{goal_poses}"
@@ -135,7 +135,7 @@
             <input_port name="frame_id"/>
             <output_port name="start_pose"/>
         </Action>
-        <Action ID="CallCheckCandidates">
+        <Action ID="SelectGoal">
             <input_port name="candidates_ids"/>
             <input_port name="similarity_scores"/>
             <input_port name="goal_poses"/>

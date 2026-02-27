@@ -34,6 +34,8 @@ add_executable(bt_manager
   src/main.cpp
   src/read_json.cpp
   src/check_goal_seen.cpp
+  src/select_goal.cpp
+  src/get_next_point.cpp
   src/navigate_to_pose.cpp
   src/find_approach_pose.cpp
   src/get_robot_start_pose.cpp
