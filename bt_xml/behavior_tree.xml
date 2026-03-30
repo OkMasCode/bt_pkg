@@ -25,12 +25,17 @@
 
             <Sequence name="DecideAndNavigate">
 
-                <SelectGoal 
+                <SelectGoal
+                    logic="{logic}"
                     candidates_ids="{candidates}" 
                     similarity_scores="{similarity_scores}"
                     goal_poses="{goal_poses}"
+                    cluster_ids="{cluster_ids}"
+                    cluster="{cluster}"
                     cluster_centroid="{cluster_centroid}"
+                    start_pose="{start_pose}"
                     similarity_threshold="8.0"
+                    multipler_threshold="10.0"
                     target_pose="{target_pose}"
                     is_object_goal="{is_object}"
                 />
@@ -138,11 +143,16 @@
             <output_port name="start_pose"/>
         </Action>
         <Action ID="SelectGoal">
+            <input_port name="logic"/>
             <input_port name="candidates_ids"/>
             <input_port name="similarity_scores"/>
             <input_port name="goal_poses"/>
+            <input_port name="cluster_ids"/>
+            <input_port name="cluster"/>
             <input_port name="cluster_centroid"/>
+            <input_port name="start_pose"/>
             <input_port name="similarity_threshold"/>
+            <input_port name="multipler_threshold"/>
             <output_port name="target_pose"/>
             <output_port name="is_object_goal"/>
         </Action>

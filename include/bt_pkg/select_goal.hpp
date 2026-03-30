@@ -5,6 +5,8 @@
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include <vector>
 
+class enum class LogicType { GENERIC_OBJECT, GENERIC_OBJECT_SPECIFIC_LOCATION, SPECIFIC_OBJECT_WITH_FEATURES };
+
 // Synchronous BT action that selects a navigation target from perception candidates.
 class SelectGoal : public BT::SyncActionNode
 {
@@ -17,6 +19,7 @@ public:
     static BT::PortsList providedPorts()
     {
         return {
+            BT::InputPort<LogicType>("logic"),  // "object" or "explore" to control selection strategy.
             // Candidate object IDs associated with each detected goal pose.
             BT::InputPort<std::vector<std::string>>("candidates_ids"),
             // Similarity score for each candidate (same indexing as goal_poses).
@@ -24,9 +27,15 @@ public:
             // Candidate object poses returned by perception.
             BT::InputPort<std::vector<geometry_msgs::msg::PoseStamped>>("goal_poses"),
             // Fallback exploration pose when no confident object match is found.
+            BT::InputPort<std::vector<int>>("cluster_ids"), // Optional cluster IDs for more advanced logic.
+            BT::InputPort<int>("cluster"), 
             BT::InputPort<geometry_msgs::msg::PoseStamped>("cluster_centroid"),
             // Minimum score required to accept a candidate object pose.
+            BT::InputPort<geometry_msgs::msg::PoseStamped>("start_pose"),
+
             BT::InputPort<double>("similarity_threshold"),
+
+            BT::InputPort<double>("multipler_threshold"), // Optional multiplier threshold for more aggressive selection.
             
             // Selected navigation target (object pose or cluster centroid).
             BT::OutputPort<geometry_msgs::msg::PoseStamped>("target_pose"),
