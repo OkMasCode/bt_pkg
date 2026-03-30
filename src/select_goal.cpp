@@ -16,7 +16,6 @@
         geometry_msgs::msg::PoseStamped cluster_centroid;
         geometry_msgs::msg::PoseStamped start_pose;
         double similarity_threshold = 8.0;
-        double multiplier_threshold = 10.0;
         LogicType logic;
 
         if (!getInput("logic", logic)) {
@@ -54,7 +53,6 @@
         }
         // Optional threshold: defaults to 8.0 if not provided.
         getInput("similarity_threshold", similarity_threshold);
-        getInput("multiplier_threshold", multiplier_threshold);
 
         // If perception outputs are empty, fall back to exploring the cluster centroid.
         if (candidates_ids.empty() || similarity_scores.empty() || goal_poses.empty()) {

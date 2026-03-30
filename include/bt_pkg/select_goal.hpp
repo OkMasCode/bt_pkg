@@ -34,8 +34,6 @@ public:
             BT::InputPort<geometry_msgs::msg::PoseStamped>("start_pose"),
 
             BT::InputPort<double>("similarity_threshold"),
-
-            BT::InputPort<double>("multipler_threshold"), // Optional multiplier threshold for more aggressive selection.
             
             // Selected navigation target (object pose or cluster centroid).
             BT::OutputPort<geometry_msgs::msg::PoseStamped>("target_pose"),

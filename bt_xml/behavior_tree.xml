@@ -35,7 +35,6 @@
                     cluster_centroid="{cluster_centroid}"
                     start_pose="{start_pose}"
                     similarity_threshold="8.0"
-                    multipler_threshold="10.0"
                     target_pose="{target_pose}"
                     is_object_goal="{is_object}"
                 />
@@ -63,7 +62,8 @@
 
                             <CheckGoalSeen 
                                 goal_pose = "{target_pose}"
-                                goal_topic = "/vision/goal_position"
+                                goal_pose_topic = "/vision/goal_position"
+                                goal_flag_topic = "/vision/goal_reached"
                             />
 
                             <Repeat num_cycles="-1" name="InfiniteExploration">
@@ -170,7 +170,8 @@
             <input_port name="goal"/>
         </Action>
         <Condition ID="CheckGoalSeen">
-            <input_port name="goal_topic"/>
+            <input_port name="goal_pose_topic"/>
+            <input_port name="goal_flag_topic"/>
             <output_port name="goal_pose"/>
         </Condition>
         <Action ID="GetNextPoint">
