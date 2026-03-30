@@ -24,6 +24,7 @@ BT::NodeStatus ReadJson::tick()
         // Extract candidates from schema: goal_objects[] = { id, similarity_score, coords }.
         std::vector<std::string> candidates;
         std::vector<double> similarity_scores;
+        std::vector<int> cluster_ids;
         std::vector<geometry_msgs::msg::PoseStamped> goal_poses;
         if (data.contains("goal_objects") && data["goal_objects"].is_array()) {
             for (const auto& item : data["goal_objects"]) {
@@ -34,6 +35,11 @@ BT::NodeStatus ReadJson::tick()
                         similarity_scores.push_back(item["similarity_score"].get<double>());
                     } else {
                         similarity_scores.push_back(0.0);
+                    }
+                    if (item.contains("cluster_id") && item["cluster_id"].is_number_integer()) {
+                        cluster_ids.push_back(item["cluster_id"].get<int>());
+                    } else {
+                        cluster_ids.push_back(-1); // Default invalid cluster ID.
                     }
 
                     // Build goal pose in map frame from coords if present.
@@ -62,23 +68,7 @@ BT::NodeStatus ReadJson::tick()
         setOutput("candidates_ids", candidates);
         setOutput("similarity_scores", similarity_scores);
         setOutput("goal_poses", goal_poses);
-
-        // Extract CLIP prompts with backward-compatible fallbacks.
-        std::vector<std::string> prompts;
-        if (data.contains("clip_prompts") && data["clip_prompts"].is_array()) {
-            for (const auto& item : data["clip_prompts"]) {
-                prompts.push_back(item.get<std::string>());
-            }
-        } else if (data.contains("clip_prompt") && data["clip_prompt"].is_array()) {
-            for (const auto& item : data["clip_prompt"]) {
-                prompts.push_back(item.get<std::string>());
-            }
-        } else if (data.contains("prompt") && data["prompt"].is_string()) {
-            // Fallback: single legacy prompt string.
-            prompts.push_back(data["prompt"].get<std::string>());
-        }
-        setOutput("prompt", prompts);
-
+        setOutput("cluster_ids", cluster_ids);
 
         // Extract high-level action string.
         std::string action = "";
@@ -87,7 +77,22 @@ BT::NodeStatus ReadJson::tick()
         }
         setOutput("action", action);
 
-
+        std::string logic_str = "";
+        LogicType logic_value = LogicType::GENERIC_OBJECT; // Default value.
+        if (data.contains("logic") && data["logic"].is_string()) {
+            logic_str = data["logic"].get<std::string>();
+            if (logic_str == "GENERIC_OBJECT") {
+                logic_value = LogicType::GENERIC_OBJECT;
+            } else if (logic_str == "GENERIC_OBJECT_SPECIFIC_LOCATION") {
+                logic_value = LogicType::GENERIC_OBJECT_SPECIFIC_LOCATION;
+            } else if (logic_str == "SPECIFIC_OBJECT_WITH_FEATURES") {
+                logic_value = LogicType::SPECIFIC_OBJECT_WITH_FEATURES;
+            } else {
+                std::cerr << "[ReadJson] Warning: Unrecognized logic type '" << logic_str << "'. Defaulting to GENERIC_OBJECT." << std::endl;
+            }
+        }
+        setOutput("logic", logic_value);
+        
         // Extract cluster metadata from schema: cluster_info = { cluster_id, coords, dimensions }.
         int cluster_id_value = -1;
         geometry_msgs::msg::PoseStamped cluster_centroid;

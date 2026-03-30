@@ -9,11 +9,12 @@
                 candidates_ids="{candidates}" 
                 similarity_scores="{similarity_scores}"
                 goal_poses="{goal_poses}"
-                prompt="{clip_prompt}" 
+                cluster_ids="{cluster_ids}"
                 cluster="{cluster}" 
                 cluster_centroid="{cluster_centroid}"
                 cluster_dimensions="{cluster_dimensions}"
                 action="{robot_action}"
+                logic = "{logic}"
             />
 
             <GetRobotStartPose 
@@ -124,11 +125,12 @@
             <output_port name="candidates_ids"/>
             <output_port name="similarity_scores"/>
             <output_port name="goal_poses"/>
-            <output_port name="prompt"/>
+            <output_port name="cluster_ids"/>
             <output_port name="cluster"/>
             <output_port name="cluster_centroid"/>
             <output_port name="cluster_dimensions"/>
             <output_port name="action"/>
+            <output_port name="logic"/>
         </Action>
         <Action ID="GetRobotStartPose">
             <input_port name="tf_topic"/>

@@ -8,6 +8,8 @@
 
 using json = nlohmann::json;
 
+class enum class LogicType { GENERIC_OBJECT, GENERIC_OBJECT_SPECIFIC_LOCATION, SPECIFIC_OBJECT_WITH_FEATURES };
+
 // Synchronous BT action that parses a command JSON file and publishes fields to blackboard ports.
 class ReadJson : public BT::SyncActionNode
 {
@@ -26,14 +28,14 @@ public:
             BT::OutputPort<std::vector<std::string>>("candidates_ids"),
             BT::OutputPort<std::vector<double>>("similarity_scores"),
             BT::OutputPort<std::vector<geometry_msgs::msg::PoseStamped>>("goal_poses"),
-            // CLIP prompts to evaluate.
-            BT::OutputPort<std::vector<std::string>>("prompt"), 
+            BT::OutputPort<std::vector<int>>("cluster_ids"),
             // Selected cluster metadata.
             BT::OutputPort<int>("cluster"),
             BT::OutputPort<geometry_msgs::msg::PoseStamped>("cluster_centroid"),
             BT::OutputPort<std::string>("cluster_dimensions"),
             // High-level task action (e.g., bring_back_object).
             BT::OutputPort<std::string>("action")
+            BT::OutputPort<LogicType>("logic")
         };
     }
 
