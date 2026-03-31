@@ -8,8 +8,7 @@
 
 using json = nlohmann::json;
 
-class enum class LogicType { GENERIC_OBJECT, GENERIC_OBJECT_SPECIFIC_LOCATION, SPECIFIC_OBJECT_WITH_FEATURES };
-
+#include "bt_pkg/logic_type.hpp"
 // Synchronous BT action that parses a command JSON file and publishes fields to blackboard ports.
 class ReadJson : public BT::SyncActionNode
 {
@@ -34,7 +33,7 @@ public:
             BT::OutputPort<geometry_msgs::msg::PoseStamped>("cluster_centroid"),
             BT::OutputPort<std::string>("cluster_dimensions"),
             // High-level task action (e.g., bring_back_object).
-            BT::OutputPort<std::string>("action")
+            BT::OutputPort<std::string>("action"),
             BT::OutputPort<LogicType>("logic")
         };
     }
