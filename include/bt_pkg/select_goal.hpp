@@ -17,35 +17,11 @@
 class SelectGoal : public BT::SyncActionNode
 {
 public:
-    // Constructor declaration (implementation is in the .cpp file where the subscriber is created)
+    // Constructor declaration
     SelectGoal(const std::string& name, const BT::NodeConfiguration& config);
 
-    // Ports consumed/produced by this node.
-    static BT::PortsList providedPorts()
-    {
-        return {
-            // Control selection strategy (GENERIC, SPECIFIC, etc.)
-            BT::InputPort<LogicType>("logic"),  
-            
-            // The name of the object we are looking for (e.g., "pillow")
-            BT::InputPort<std::string>("target_class"),
-            
-            // Fallback exploration pose or cluster center
-            BT::InputPort<geometry_msgs::msg::PoseStamped>("cluster_centroid"),
-            
-            // Robot's starting position used to calculate closest object
-            BT::InputPort<geometry_msgs::msg::PoseStamped>("start_pose"),
-
-            // Minimum score required to accept a candidate object pose (SigLIP threshold)
-            BT::InputPort<double>("similarity_threshold"),
-            
-            // Selected navigation target (object pose or cluster centroid).
-            BT::OutputPort<geometry_msgs::msg::PoseStamped>("target_pose"),
-            
-            // True when target_pose is an object goal, false when it is the centroid.
-            BT::OutputPort<bool>("is_object_goal")
-        };
-    }
+    // Ports consumed/produced by this node. (Declaration only!)
+    static BT::PortsList providedPorts();
 
     // Chooses the best target and writes outputs to the blackboard.
     BT::NodeStatus tick() override;

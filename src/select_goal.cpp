@@ -86,8 +86,11 @@ BT::NodeStatus SelectGoal::tick()
     // Helper lambda to construct a PoseStamped from a map object
     auto make_pose = [&](const yolo11_seg_interfaces::msg::SemanticObject& obj) {
         geometry_msgs::msg::PoseStamped p;
-        p.header.frame_id = current_map->header.frame_id;
+        
+        // FIXED: Use the 'frame' field from the individual SemanticObject
+        p.header.frame_id = obj.frame; 
         p.header.stamp = node->now();
+        
         p.pose.position.x = obj.pose_map.x;
         p.pose.position.y = obj.pose_map.y;
         p.pose.position.z = obj.pose_map.z;
