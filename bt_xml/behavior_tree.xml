@@ -6,11 +6,15 @@
 
             <ReadJson 
                 file_path="/workspaces/ros2_ws/src/yolo11_seg_bringup/config/robot_command.json"
-                target_class="{target_class}" 
+                candidates_ids="{candidates}" 
+                similarity_scores="{similarity_scores}"
+                goal_poses="{goal_poses}"
+                cluster_ids="{cluster_ids}"
+                cluster="{cluster}" 
                 cluster_centroid="{cluster_centroid}"
                 cluster_dimensions="{cluster_dimensions}"
                 action="{robot_action}"
-                logic="{logic}"
+                logic = "{logic}"
             />
 
             <GetRobotStartPose 
@@ -23,10 +27,14 @@
 
                 <SelectGoal
                     logic="{logic}"
-                    target_class="{target_class}" 
+                    candidates_ids="{candidates}" 
+                    similarity_scores="{similarity_scores}"
+                    goal_poses="{goal_poses}"
+                    cluster_ids="{cluster_ids}"
+                    cluster="{cluster}"
                     cluster_centroid="{cluster_centroid}"
                     start_pose="{start_pose}"
-                    similarity_threshold="15.0"
+                    similarity_threshold="8.0"
                     target_pose="{target_pose}"
                     is_object_goal="{is_object}"
                 />
@@ -53,9 +61,9 @@
                         <ReactiveFallback name="ExploreUntilFound">
 
                             <CheckGoalSeen 
-                                goal_pose="{target_pose}"
-                                goal_pose_topic="/vision/goal_position"
-                                goal_flag_topic="/vision/goal_reached"
+                                goal_pose = "{target_pose}"
+                                goal_pose_topic = "/vision/goal_position"
+                                goal_flag_topic = "/vision/goal_reached"
                             />
 
                             <Repeat num_cycles="-1" name="InfiniteExploration">
@@ -119,7 +127,11 @@
     <TreeNodesModel>
         <Action ID="ReadJson">
             <input_port name="file_path"/>
-            <output_port name="target_class"/>
+            <output_port name="candidates_ids"/>
+            <output_port name="similarity_scores"/>
+            <output_port name="goal_poses"/>
+            <output_port name="cluster_ids"/>
+            <output_port name="cluster"/>
             <output_port name="cluster_centroid"/>
             <output_port name="cluster_dimensions"/>
             <output_port name="action"/>
@@ -132,10 +144,15 @@
         </Action>
         <Action ID="SelectGoal">
             <input_port name="logic"/>
-            <input_port name="target_class"/>
+            <input_port name="candidates_ids"/>
+            <input_port name="similarity_scores"/>
+            <input_port name="goal_poses"/>
+            <input_port name="cluster_ids"/>
+            <input_port name="cluster"/>
             <input_port name="cluster_centroid"/>
             <input_port name="start_pose"/>
             <input_port name="similarity_threshold"/>
+            <input_port name="multipler_threshold"/>
             <output_port name="target_pose"/>
             <output_port name="is_object_goal"/>
         </Action>
