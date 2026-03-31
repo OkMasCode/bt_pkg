@@ -5,8 +5,7 @@
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include <vector>
 
-class enum class LogicType { GENERIC_OBJECT, GENERIC_OBJECT_SPECIFIC_LOCATION, SPECIFIC_OBJECT_WITH_FEATURES };
-
+#include "bt_pkg/logic_type.hpp"
 // Synchronous BT action that selects a navigation target from perception candidates.
 class SelectGoal : public BT::SyncActionNode
 {

@@ -1,97 +1,123 @@
 #include "bt_pkg/check_goal_seen.hpp"
-// Make sure to add this include in your header file if it's not there:
-// #include <std_msgs/msg/bool.hpp>
+#include <fstream>
+#include <nlohmann/json.hpp>
+#include <algorithm>
+#include <cctype>
+
+CheckGoalSeen::CheckGoalSeen(const std::string& name, const BT::NodeConfiguration& config)
+    : BT::ConditionNode(name, config)
+{
+}
+
+// Helper: Replicates the Python script's logic to extract the goal string
+std::string CheckGoalSeen::getGoalFromJson(const std::string& file_path) {
+    std::ifstream f(file_path);
+    if (!f.is_open()) return "";
+    try {
+        nlohmann::json data = nlohmann::json::parse(f);
+        if (data.contains("goal") && data["goal"].is_string()) {
+            std::string goal = data["goal"];
+            // Convert to lowercase to match the map logic
+            std::transform(goal.begin(), goal.end(), goal.begin(), 
+                           [](unsigned char c){ return std::tolower(c); });
+            return goal;
+        }
+    } catch (const std::exception& e) {
+        // Silently handle parsing errors
+    }
+    return "";
+}
 
 BT::NodeStatus CheckGoalSeen::tick()
 {
-    auto node = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
-    if (!node) {
-        throw std::runtime_error("Missing ROS Node in Blackboard");
+    // 1. Initialize ROS node and subscriber on the first tick
+    if (!node_) {
+        node_ = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
+        if (!node_) {
+            throw std::runtime_error("Missing ROS Node in Blackboard");
+        }
+
+        rclcpp::QoS qos(10);
+        qos.best_effort();
+        qos.durability_volatile();
+
+        map_sub_ = node_->create_subscription<yolo11_seg_interfaces::msg::SemanticObjectArray>(
+            "/vision/semantic_map_v5", qos,
+            [this](const yolo11_seg_interfaces::msg::SemanticObjectArray::SharedPtr msg) {
+                std::lock_guard<std::mutex> lock(map_mutex_);
+                latest_map_ = msg;
+            });
+        
+        RCLCPP_INFO(node_->get_logger(), "[CheckGoalSeen] Subscribed to live map.");
     }
 
-    ensureSubscription(node);
+    // 2. Read Inputs from the Blackboard/XML
+    std::string file_path = "/workspaces/ros2_ws/src/yolo11_seg_bringup/config/robot_command.json";
+    getInput("command_file_path", file_path);
 
-    std::lock_guard<std::mutex> lock(mutex_);
-    
-    // Check if the goal is currently visible based on the boolean flag
-    if (!is_goal_seen_ || !has_goal_pose_) {
+    double similarity_threshold = 15.0; 
+    getInput("similarity_threshold", similarity_threshold);
+
+    // 3. Determine target_class from JSON
+    std::string target_class = getGoalFromJson(file_path);
+    if (target_class.empty()) {
+        RCLCPP_WARN_THROTTLE(node_->get_logger(), *node_->get_clock(), 2000, 
+            "[CheckGoalSeen] Could not read goal from JSON. Returning FAILURE.");
         return BT::NodeStatus::FAILURE;
     }
 
-    // Goal is seen, write the latest pose to the blackboard
-    if (!setOutput("goal_pose", latest_goal_pose_)) {
-        RCLCPP_ERROR(node_->get_logger(), "[CheckGoalSeen] Failed to write 'goal_pose' output port");
-        return BT::NodeStatus::FAILURE;
-    }
-
-    RCLCPP_INFO_THROTTLE(
-        node_->get_logger(),
-        *node_->get_clock(),
-        2000,
-        "[CheckGoalSeen] Goal pose available: x=%.3f, y=%.3f, z=%.3f",
-        latest_goal_pose_.pose.position.x,
-        latest_goal_pose_.pose.position.y,
-        latest_goal_pose_.pose.position.z);
-
-    return BT::NodeStatus::SUCCESS;
-}
-
-void CheckGoalSeen::ensureSubscription(rclcpp::Node::SharedPtr& node)
-{
-    std::string pose_topic;
-    std::string flag_topic;
-
-    // Retrieve both topic names from the BT XML
-    if (!getInput("goal_pose_topic", pose_topic) || pose_topic.empty()) {
-        throw BT::RuntimeError("[CheckGoalSeen] missing required input [goal_pose_topic]");
-    }
-    if (!getInput("goal_flag_topic", flag_topic) || flag_topic.empty()) {
-        throw BT::RuntimeError("[CheckGoalSeen] missing required input [goal_flag_topic]");
-    }
-
-    // Skip initialization if we are already subscribed to the correct topics
-    if (goal_pose_sub_ && goal_flag_sub_ && node_ == node && 
-        subscribed_pose_topic_ == pose_topic && subscribed_flag_topic_ == flag_topic) {
-        return;
-    }
-
-    node_ = node;
-    subscribed_pose_topic_ = pose_topic;
-    subscribed_flag_topic_ = flag_topic;
-
+    // 4. Safely copy the latest map
+    yolo11_seg_interfaces::msg::SemanticObjectArray::SharedPtr current_map;
     {
-        std::lock_guard<std::mutex> lock(mutex_);
-        has_goal_pose_ = false;
-        is_goal_seen_ = false; // Initialize the new flag tracking variable
+        std::lock_guard<std::mutex> lock(map_mutex_);
+        current_map = latest_map_;
     }
 
-    auto qos = rclcpp::QoS(rclcpp::KeepLast(1)).reliable();
-    
-    // Subscribe to the Pose topic
-    goal_pose_sub_ = node_->create_subscription<geometry_msgs::msg::PoseStamped>(
-        subscribed_pose_topic_,
-        qos,
-        std::bind(&CheckGoalSeen::onGoalPose, this, std::placeholders::_1));
+    if (!current_map || current_map->objects.empty()) {
+        return BT::NodeStatus::FAILURE;
+    }
 
-    // Subscribe to the Boolean flag topic
-    goal_flag_sub_ = node_->create_subscription<std_msgs::msg::Bool>(
-        subscribed_flag_topic_,
-        qos,
-        std::bind(&CheckGoalSeen::onGoalFlag, this, std::placeholders::_1));
+    // 5. Search for the best matching object
+    double best_sim = -1.0;
+    bool found = false;
+    yolo11_seg_interfaces::msg::SemanticObject best_obj;
 
-    RCLCPP_INFO(node_->get_logger(), "[CheckGoalSeen] Subscribed to poses on %s and flags on %s", 
-                subscribed_pose_topic_.c_str(), subscribed_flag_topic_.c_str());
-}
+    for (const auto& obj : current_map->objects) {
+        // Enforce lowercase comparison
+        std::string obj_name = obj.name;
+        std::transform(obj_name.begin(), obj_name.end(), obj_name.begin(), 
+                       [](unsigned char c){ return std::tolower(c); });
 
-void CheckGoalSeen::onGoalPose(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    latest_goal_pose_ = *msg;
-    has_goal_pose_ = true;
-}
+        if (obj_name == target_class) {
+            if (obj.similarity > best_sim) {
+                best_sim = obj.similarity;
+                best_obj = obj;
+                found = true;
+            }
+        }
+    }
 
-void CheckGoalSeen::onGoalFlag(const std_msgs::msg::Bool::SharedPtr msg)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    is_goal_seen_ = msg->data; // Updates in real-time if the object is lost or found
+    // 6. Evaluate the match against the threshold
+    if (found && best_sim >= similarity_threshold) {
+        geometry_msgs::msg::PoseStamped goal_pose;
+        goal_pose.header.frame_id = best_obj.frame;
+        goal_pose.header.stamp = node_->now();
+        goal_pose.pose.position.x = best_obj.pose_map.x;
+        goal_pose.pose.position.y = best_obj.pose_map.y;
+        goal_pose.pose.position.z = best_obj.pose_map.z;
+        goal_pose.pose.orientation.w = 1.0;
+
+        setOutput("goal_pose", goal_pose);
+        
+        RCLCPP_INFO_THROTTLE(
+            node_->get_logger(),
+            *node_->get_clock(),
+            2000,
+            "[CheckGoalSeen] Goal '%s' SEEN! Sim: %.2f >= %.2f",
+            target_class.c_str(), best_sim, similarity_threshold);
+            
+        return BT::NodeStatus::SUCCESS;
+    }
+
+    return BT::NodeStatus::FAILURE;
 }
