@@ -36,8 +36,8 @@ BT::NodeStatus ReadJson::tick()
                     } else {
                         similarity_scores.push_back(0.0);
                     }
-                    if (item.contains("cluster_id") && item["cluster_id"].is_number_integer()) {
-                        cluster_ids.push_back(item["cluster_id"].get<int>());
+                    if (item.contains("cluster") && item["cluster"].is_number_integer()) {
+                        cluster_ids.push_back(item["cluster"].get<int>());
                     } else {
                         cluster_ids.push_back(-1); // Default invalid cluster ID.
                     }

@@ -71,16 +71,27 @@
                                 <Sequence name="ExplorationStep">
 
                                     <GetNextPoint 
-                                        next_point="{exploration_pose}"
+                                        next_point="{raw_exploration_pose}"
                                         cluster_centroid="{cluster_centroid}"
                                         cluster_dimensions="{cluster_dimensions}"
                                     />
 
-                                    <NavigateToPose goal="{exploration_pose}"/>
+                                    <FindApproachPose
+                                        goal_pose="{raw_exploration_pose}"
+                                        approach_pose="{safe_exploration_pose}"
+                                        costmap_topic="/global_costmap/costmap"
+                                        min_radius="0.0"
+                                        max_radius="2.0"
+                                        radius_step="0.2"
+                                        angle_step_deg="30.0"
+                                        free_threshold="0"
+                                    />
 
+                                    <NavigateToPose goal="{safe_exploration_pose}"/>
                                     <Rotate360 angle_increment="45.0"/>
-                                    
+
                                 </Sequence>
+                                
                             </Repeat>
 
                         </ReactiveFallback>

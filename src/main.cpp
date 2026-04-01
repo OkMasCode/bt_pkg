@@ -12,6 +12,7 @@
 #include "bt_pkg/rotate_360.hpp"
 #include "bt_pkg/get_robot_start_pose.hpp"
 #include "bt_pkg/check_goal_seen.hpp"
+#include "bt_pkg/get_next_point.hpp"
 
 int main(int argc, char **argv)
 {
@@ -25,7 +26,7 @@ int main(int argc, char **argv)
     BT::BehaviorTreeFactory factory;
 
     // Tag names must match node IDs used in the XML tree.
-    factory.registerNodeType<ReadJson>("ReadJson");
+    factory.registerNodeType<ReadJson>("ReadJson");    
     factory.registerNodeType<SelectGoal>("SelectGoal");
     factory.registerNodeType<NavigateToPose>("NavigateToPose");
     factory.registerNodeType<FindApproachPose>("FindApproachPose");
@@ -34,6 +35,7 @@ int main(int argc, char **argv)
     factory.registerNodeType<Rotate360>("Rotate360");
     factory.registerNodeType<GetRobotStartPose>("GetRobotStartPose");
     factory.registerNodeType<CheckGoalSeen>("CheckGoalSeen");
+    factory.registerNodeType<GetNextPoint>("GetNextPoint"); 
 
     // Configure blackboard entries shared by all BT nodes.
     auto blackboard = BT::Blackboard::create();
