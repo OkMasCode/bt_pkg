@@ -21,54 +21,12 @@ BT::NodeStatus ReadJson::tick()
         // Parse JSON document.
         json data = json::parse(f);
 
-        // Extract candidates from schema: goal_objects[] = { id, similarity_score, coords }.
-        std::vector<std::string> candidates;
-        std::vector<double> similarity_scores;
-        std::vector<int> cluster_ids;
-        std::vector<geometry_msgs::msg::PoseStamped> goal_poses;
-        if (data.contains("goal_objects") && data["goal_objects"].is_array()) {
-            for (const auto& item : data["goal_objects"]) {
-                if (item.is_object() && item.contains("id")) {
-                    candidates.push_back(item["id"].get<std::string>());
-                    // Missing similarity defaults to 0.0.
-                    if (item.contains("similarity_score") && item["similarity_score"].is_number()) {
-                        similarity_scores.push_back(item["similarity_score"].get<double>());
-                    } else {
-                        similarity_scores.push_back(0.0);
-                    }
-                    if (item.contains("cluster") && item["cluster"].is_number_integer()) {
-                        cluster_ids.push_back(item["cluster"].get<int>());
-                    } else {
-                        cluster_ids.push_back(-1); // Default invalid cluster ID.
-                    }
-
-                    // Build goal pose in map frame from coords if present.
-                    geometry_msgs::msg::PoseStamped goal_pose;
-                    goal_pose.header.frame_id = "map";
-                    goal_pose.header.stamp = rclcpp::Clock().now();
-                    if (item.contains("coords") && item["coords"].is_object()) {
-                        const auto& coords = item["coords"];
-                        goal_pose.pose.position.x = coords["x"].get<double>();
-                        goal_pose.pose.position.y = coords["y"].get<double>();
-                        goal_pose.pose.position.z = coords["z"].get<double>();
-                    } else {
-                        goal_pose.pose.position.x = 0.0;
-                        goal_pose.pose.position.y = 0.0;
-                        goal_pose.pose.position.z = 0.0;
-                    }
-                    goal_pose.pose.orientation.w = 1.0;
-                    goal_pose.pose.orientation.x = 0.0;
-                    goal_pose.pose.orientation.y = 0.0;
-                    goal_pose.pose.orientation.z = 0.0;
-                    goal_poses.push_back(goal_pose);
-                }
-            }
+        // Extract command-level goal class used to filter objects from the clustered-map topic.
+        std::string goal_class = "";
+        if (data.contains("goal") && data["goal"].is_string()) {
+            goal_class = data["goal"].get<std::string>();
         }
-        // Publish candidate outputs.
-        setOutput("candidates_ids", candidates);
-        setOutput("similarity_scores", similarity_scores);
-        setOutput("goal_poses", goal_poses);
-        setOutput("cluster_ids", cluster_ids);
+        setOutput("goal_class", goal_class);
 
         // Extract high-level action string.
         std::string action = "";
@@ -93,38 +51,13 @@ BT::NodeStatus ReadJson::tick()
         }
         setOutput("logic", logic_value);
         
-        // Extract cluster metadata from schema: cluster_info = { cluster_id, coords, dimensions }.
+        // Extract selected cluster id from command.
         int cluster_id_value = -1;
-        geometry_msgs::msg::PoseStamped cluster_centroid;
-        std::string cluster_dimensions_str = "";
         
         if (data.contains("cluster_info") && data["cluster_info"].is_object()) {
             const auto& ci = data["cluster_info"];
             if (ci.contains("cluster_id")) {
                 cluster_id_value = ci["cluster_id"].get<int>();
-            }
-            
-            // Centroid coordinates are required for downstream navigation.
-            if (ci.contains("coords") && ci["coords"].is_object()) {
-                const auto& coords = ci["coords"];
-                cluster_centroid.header.frame_id = "map";
-                cluster_centroid.header.stamp = rclcpp::Clock().now();
-                cluster_centroid.pose.position.x = coords["x"].get<double>();
-                cluster_centroid.pose.position.y = coords["y"].get<double>();
-                cluster_centroid.pose.position.z = coords.contains("z") ? coords["z"].get<double>() : 0.0;
-                // Use identity orientation by default.
-                cluster_centroid.pose.orientation.w = 1.0;
-                cluster_centroid.pose.orientation.x = 0.0;
-                cluster_centroid.pose.orientation.y = 0.0;
-                cluster_centroid.pose.orientation.z = 0.0;
-            } else {
-                std::cerr << "[ReadJson] Error: Missing cluster_info.coords" << std::endl;
-                return BT::NodeStatus::FAILURE;
-            }
-            
-            // Store dimensions as raw JSON string for downstream consumers.
-            if (ci.contains("dimensions")) {
-                cluster_dimensions_str = ci["dimensions"].dump();
             }
         }
         // cluster_id is mandatory for validity.
@@ -133,14 +66,9 @@ BT::NodeStatus ReadJson::tick()
             return BT::NodeStatus::FAILURE;
         }
         setOutput("cluster", cluster_id_value);
-        setOutput("cluster_centroid", cluster_centroid);
-        setOutput("cluster_dimensions", cluster_dimensions_str);
 
-        std::cout << "[ReadJson] Successfully parsed command. Found " 
-              << candidates.size() << " candidates and set cluster centroid at (" 
-              << cluster_centroid.pose.position.x << ", " 
-              << cluster_centroid.pose.position.y << ", " 
-              << cluster_centroid.pose.position.z << ")." << std::endl;
+                std::cout << "[ReadJson] Successfully parsed command fields. goal='" << goal_class
+                << "' cluster=" << cluster_id_value << " action='" << action << "'." << std::endl;
 
         return BT::NodeStatus::SUCCESS;
 

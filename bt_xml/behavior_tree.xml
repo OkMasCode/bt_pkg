@@ -6,13 +6,8 @@
 
             <ReadJson 
                 file_path="/workspaces/ros2_ws/src/yolo11_seg_bringup/config/robot_command.json"
-                candidates_ids="{candidates}" 
-                similarity_scores="{similarity_scores}"
-                goal_poses="{goal_poses}"
-                cluster_ids="{cluster_ids}"
+                goal_class="{goal_class}"
                 cluster="{cluster}" 
-                cluster_centroid="{cluster_centroid}"
-                cluster_dimensions="{cluster_dimensions}"
                 action="{robot_action}"
                 logic = "{logic}"
             />
@@ -27,14 +22,17 @@
 
                 <SelectGoal
                     logic="{logic}"
+                    goal_class="{goal_class}"
+                    clustered_map_topic="/vision/clustered_map_v6"
+                    cluster="{cluster}"
+                    start_pose="{start_pose}"
+                    similarity_threshold="8.0"
                     candidates_ids="{candidates}" 
                     similarity_scores="{similarity_scores}"
                     goal_poses="{goal_poses}"
                     cluster_ids="{cluster_ids}"
-                    cluster="{cluster}"
                     cluster_centroid="{cluster_centroid}"
-                    start_pose="{start_pose}"
-                    similarity_threshold="8.0"
+                    cluster_dimensions="{cluster_dimensions}"
                     target_pose="{target_pose}"
                     is_object_goal="{is_object}"
                 />
@@ -60,11 +58,25 @@
 
                         <ReactiveFallback name="ExploreUntilFound">
 
-                            <CheckGoalSeen 
-                                goal_pose="{target_pose}"
-                                command_file_path="/workspaces/ros2_ws/src/yolo11_seg_bringup/config/robot_command.json"
-                                similarity_threshold="15.0"
-                            />
+                            <Sequence name="RefreshGoalFromMap">
+                                <SelectGoal
+                                    logic="{logic}"
+                                    goal_class="{goal_class}"
+                                    clustered_map_topic="/vision/clustered_map_v6"
+                                    cluster="{cluster}"
+                                    start_pose="{start_pose}"
+                                    similarity_threshold="8.0"
+                                    candidates_ids="{candidates}" 
+                                    similarity_scores="{similarity_scores}"
+                                    goal_poses="{goal_poses}"
+                                    cluster_ids="{cluster_ids}"
+                                    cluster_centroid="{cluster_centroid}"
+                                    cluster_dimensions="{cluster_dimensions}"
+                                    target_pose="{target_pose}"
+                                    is_object_goal="{is_object}"
+                                />
+                                <CheckIsObject is_object="{is_object}"/>
+                            </Sequence>
 
                             <Repeat num_cycles="-1" name="InfiniteExploration">
 
@@ -138,13 +150,8 @@
     <TreeNodesModel>
         <Action ID="ReadJson">
             <input_port name="file_path"/>
-            <output_port name="candidates_ids"/>
-            <output_port name="similarity_scores"/>
-            <output_port name="goal_poses"/>
-            <output_port name="cluster_ids"/>
+            <output_port name="goal_class"/>
             <output_port name="cluster"/>
-            <output_port name="cluster_centroid"/>
-            <output_port name="cluster_dimensions"/>
             <output_port name="action"/>
             <output_port name="logic"/>
         </Action>
@@ -155,15 +162,17 @@
         </Action>
         <Action ID="SelectGoal">
             <input_port name="logic"/>
-            <input_port name="candidates_ids"/>
-            <input_port name="similarity_scores"/>
-            <input_port name="goal_poses"/>
-            <input_port name="cluster_ids"/>
+            <input_port name="goal_class"/>
+            <input_port name="clustered_map_topic"/>
             <input_port name="cluster"/>
-            <input_port name="cluster_centroid"/>
             <input_port name="start_pose"/>
             <input_port name="similarity_threshold"/>
-            <input_port name="multipler_threshold"/>
+            <output_port name="candidates_ids"/>
+            <output_port name="similarity_scores"/>
+            <output_port name="goal_poses"/>
+            <output_port name="cluster_ids"/>
+            <output_port name="cluster_centroid"/>
+            <output_port name="cluster_dimensions"/>
             <output_port name="target_pose"/>
             <output_port name="is_object_goal"/>
         </Action>
