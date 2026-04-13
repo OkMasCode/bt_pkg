@@ -1,65 +1,70 @@
 #include "bt_pkg/get_next_point.hpp"
-#include <random>
-#include <cmath>
-#include <tf2/LinearMath/Quaternion.h>
+#include "yolo11_seg_interfaces/srv/get_room_waypoint.hpp"
+#include <rclcpp/rclcpp.hpp>
 
 GetNextPoint::GetNextPoint(const std::string& name, const BT::NodeConfiguration& config)
     : BT::SyncActionNode(name, config)
 {
+    // Grab the main ROS 2 node pointer from the blackboard (used for logging and clock)
+    if (!config.blackboard->get("node", node_)) {
+        throw BT::RuntimeError("GetNextPoint requires a 'node' pointer in the blackboard!");
+    }
 }
 
 BT::NodeStatus GetNextPoint::tick()
 {
-    geometry_msgs::msg::PoseStamped centroid;
-    std::vector<double> dimensions;
-
-    // 1. Read the center and size of the room/cluster
-    if (!getInput("cluster_centroid", centroid)) {
-        throw BT::RuntimeError("Missing required input [cluster_centroid]");
-    }
-    if (!getInput("cluster_dimensions", dimensions) || dimensions.size() < 2) {
-        throw BT::RuntimeError("Missing or invalid input [cluster_dimensions]. Expected [length_x, width_y].");
+    int target_cluster_id;
+    if (!getInput("target_cluster", target_cluster_id)) {
+        RCLCPP_ERROR(node_->get_logger(), "Missing required input [target_cluster]");
+        return BT::NodeStatus::FAILURE;
     }
 
-    // 2. Define the boundaries of the cluster (Length / 2)
-    double half_x = dimensions[0] / 2.0;
-    double half_y = dimensions[1] / 2.0;
-
-    // 3. Setup Random Number Generator
-    // We use a random_device to seed the Mersenne Twister engine for high-quality randomness
-    std::random_device rd;  
-    std::mt19937 gen(rd()); 
+    // 1. THE FIX: Create a temporary, isolated node to bypass executor deadlocks
+    auto temp_node = rclcpp::Node::make_shared("temp_waypoint_client_node");
     
-    // Create distributions bounded by the size of the cluster
-    std::uniform_real_distribution<double> dist_x(-half_x, half_x);
-    std::uniform_real_distribution<double> dist_y(-half_y, half_y);
-    std::uniform_real_distribution<double> dist_yaw(-M_PI, M_PI); // Random facing direction
+    // Create the client on the TEMP node, not the main node_
+    auto client = temp_node->create_client<yolo11_seg_interfaces::srv::GetRoomWaypoint>("/vision/get_room_waypoint");
+    
+    if (!client->wait_for_service(std::chrono::seconds(2))) {
+        RCLCPP_ERROR(node_->get_logger(), "Waypoint service not available!");
+        return BT::NodeStatus::FAILURE;
+    }
 
-    // Generate random offsets from the center of the cluster
-    double dx = dist_x(gen);
-    double dy = dist_y(gen);
+    // 2. Send the Request
+    auto request = std::make_shared<yolo11_seg_interfaces::srv::GetRoomWaypoint::Request>();
+    request->room_id = target_cluster_id;
 
-    // 4. Construct the next exploration waypoint
+    auto future = client->async_send_request(request);
+    
+    // 3. Spin the TEMP node. 
+    // Because temp_node isn't attached to your main executor, this is 100% safe and will not deadlock.
+    if (rclcpp::spin_until_future_complete(temp_node, future) != rclcpp::FutureReturnCode::SUCCESS) {
+        RCLCPP_ERROR(node_->get_logger(), "Failed to call waypoint service!");
+        return BT::NodeStatus::FAILURE;
+    }
+
+    auto response = future.get();
+    if (!response->success) {
+        RCLCPP_ERROR(node_->get_logger(), "Python node failed to generate a safe point for cluster %d", target_cluster_id);
+        return BT::NodeStatus::FAILURE;
+    }
+
+    // 4. Construct the Nav2 Pose
     geometry_msgs::msg::PoseStamped next_point;
-    next_point.header = centroid.header; 
+    next_point.header.frame_id = "map"; 
+    next_point.header.stamp = node_->now(); // Use main node's clock for accurate TF sync
+    next_point.pose.position = response->waypoint;
     
-    // Apply the offset to the centroid to get a point inside the cluster
-    next_point.pose.position.x = centroid.pose.position.x + dx;
-    next_point.pose.position.y = centroid.pose.position.y + dy;
-    next_point.pose.position.z = centroid.pose.position.z;
+    // Set a default orientation (facing straight/zero rotation)
+    next_point.pose.orientation.x = 0.0;
+    next_point.pose.orientation.y = 0.0;
+    next_point.pose.orientation.z = 0.0;
+    next_point.pose.orientation.w = 1.0; 
 
-    // 5. Apply a random orientation 
-    // Since the robot will do a 360 spin anyway, initial orientation isn't critical,
-    // but randomizing it prevents the local planner from getting stuck in repetitive motion patterns.
-    tf2::Quaternion q;
-    q.setRPY(0.0, 0.0, dist_yaw(gen));
-    next_point.pose.orientation.x = q.x();
-    next_point.pose.orientation.y = q.y();
-    next_point.pose.orientation.z = q.z();
-    next_point.pose.orientation.w = q.w();
-
-    // 6. Write the point to the blackboard
+    // 5. Write to Blackboard
     setOutput("next_point", next_point);
+    
+    RCLCPP_INFO(node_->get_logger(), "Successfully grabbed safe waypoint for cluster %d", target_cluster_id);
 
     return BT::NodeStatus::SUCCESS;
 }
