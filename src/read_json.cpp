@@ -67,8 +67,21 @@ BT::NodeStatus ReadJson::tick()
         }
         setOutput("cluster", cluster_id_value);
 
-                std::cout << "[ReadJson] Successfully parsed command fields. goal='" << goal_class
-                << "' cluster=" << cluster_id_value << " action='" << action << "'." << std::endl;
+        std::string anchor_class = "";
+        std::string anchor_id = "";
+        if (data.contains("anchor_object_class") && data["anchor_object_class"].is_string()) {
+            anchor_class = data["anchor_object_class"].get<std::string>();
+        }
+        setOutput("anchor_class", anchor_class);
+        if (data.contains("anchor_object_id") && data["anchor_object_id"].is_string()) {
+            anchor_id = data["anchor_object_id"].get<std::string>();
+        }
+        setOutput("anchor_id", anchor_id);
+
+        
+        std::cout << "[ReadJson] Successfully parsed command fields. goal='" << goal_class
+        << "' cluster=" << cluster_id_value << " action='" << action << "'." << std::endl;
+
 
         return BT::NodeStatus::SUCCESS;
 

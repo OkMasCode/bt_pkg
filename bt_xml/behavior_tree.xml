@@ -10,6 +10,8 @@
                 cluster="{cluster}" 
                 action="{robot_action}"
                 logic = "{logic}"
+                anchor_class = "{anchor_class}"
+                anchor_id = "{anchor_id}"
             />
 
             <GetRobotStartPose 
@@ -25,6 +27,8 @@
                     goal_class="{goal_class}"
                     clustered_map_topic="/vision/clustered_map_v6"
                     cluster="{cluster}"
+                    anchor_class="{anchor_class}"
+                    anchor_id="{anchor_id}"
                     start_pose="{start_pose}"
                     similarity_threshold="8.0"
                     candidates_ids="{candidates}" 
@@ -34,6 +38,7 @@
                     cluster_centroid="{cluster_centroid}"
                     cluster_dimensions="{cluster_dimensions}"
                     target_pose="{target_pose}"
+                    anchor_pose="{anchor_pose}"
                     is_object_goal="{is_object}"
                 />
                 
@@ -44,7 +49,7 @@
                     <Sequence name="ExploreCluster">
 
                         <FindApproachPose
-                            goal_pose="{cluster_centroid}"
+                            goal_pose="{anchor_pose}"
                             approach_pose="{exploration_pose}"
                             costmap_topic="/global_costmap/costmap"
                             min_radius="0.0"
@@ -64,6 +69,8 @@
                                     goal_class="{goal_class}"
                                     clustered_map_topic="/vision/clustered_map_v6"
                                     cluster="{cluster}"
+                                    anchor_class="{anchor_class}"
+                                    anchor_id="{anchor_id}"
                                     start_pose="{start_pose}"
                                     similarity_threshold="8.0"
                                     candidates_ids="{candidates}" 
@@ -73,6 +80,7 @@
                                     cluster_centroid="{cluster_centroid}"
                                     cluster_dimensions="{cluster_dimensions}"
                                     target_pose="{target_pose}"
+                                    anchor_pose="{anchor_pose}"
                                     is_object_goal="{is_object}"
                                 />
                                 <CheckIsObject is_object="{is_object}"/>
@@ -154,6 +162,8 @@
             <output_port name="cluster"/>
             <output_port name="action"/>
             <output_port name="logic"/>
+            <output_port name="anchor_class"/>
+            <output_port name="anchor_id"/>
         </Action>
         <Action ID="GetRobotStartPose">
             <input_port name="tf_topic"/>
@@ -165,6 +175,8 @@
             <input_port name="goal_class"/>
             <input_port name="clustered_map_topic"/>
             <input_port name="cluster"/>
+            <input_port name="anchor_class"/>
+            <input_port name="anchor_id"/>
             <input_port name="start_pose"/>
             <input_port name="similarity_threshold"/>
             <output_port name="candidates_ids"/>
@@ -174,6 +186,7 @@
             <output_port name="cluster_centroid"/>
             <output_port name="cluster_dimensions"/>
             <output_port name="target_pose"/>
+            <output_port name="anchor_pose"/>
             <output_port name="is_object_goal"/>
         </Action>
         <Action ID="FindApproachPose">

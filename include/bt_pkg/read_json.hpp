@@ -26,7 +26,10 @@ public:
             BT::OutputPort<int>("cluster"),
             // High-level task action (e.g., bring_back_object).
             BT::OutputPort<std::string>("action"),
-            BT::OutputPort<LogicType>("logic")
+            BT::OutputPort<LogicType>("logic"),
+            // Optional anchor information for logic types that require it.
+            BT::OutputPort<std::string>("anchor_class"),
+            BT::OutputPort<std::string>("anchor_id")
         };
     }
 

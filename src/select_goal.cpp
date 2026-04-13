@@ -42,9 +42,13 @@ BT::NodeStatus SelectGoal::tick()
 
     LogicType logic;
     std::string goal_class;
+    std::string anchor_class;
+    std::string anchor_id;
     std::string clustered_map_topic = "/vision/clustered_map_v6";
     int cluster;
     geometry_msgs::msg::PoseStamped start_pose;
+    
+    
     double similarity_threshold = 8.0;
 
     if (!getInput("logic", logic)) {
@@ -64,6 +68,9 @@ BT::NodeStatus SelectGoal::tick()
         RCLCPP_ERROR(node->get_logger(), "Missing start_pose input");
         return BT::NodeStatus::FAILURE;
     }
+    // Anchor inputs are optional; may be empty if no anchor was selected.
+    getInput("anchor_class", anchor_class);
+    getInput("anchor_id", anchor_id);
     // Optional threshold is retained for BT compatibility.
     getInput("similarity_threshold", similarity_threshold);
 
@@ -84,11 +91,16 @@ BT::NodeStatus SelectGoal::tick()
     std::vector<double> similarity_scores;
     std::vector<geometry_msgs::msg::PoseStamped> goal_poses;
     std::vector<int> cluster_ids;
-
     geometry_msgs::msg::PoseStamped cluster_centroid;
+    geometry_msgs::msg::PoseStamped anchor_pose;
     cluster_centroid.header.frame_id = map_msg->frame_id.empty() ? "map" : map_msg->frame_id;
     cluster_centroid.header.stamp = map_msg->stamp;
     cluster_centroid.pose.orientation.w = 1.0;
+    
+    // Initialize anchor_pose with proper header; coordinates stay zero if anchor not found.
+    anchor_pose.header.frame_id = map_msg->frame_id.empty() ? "map" : map_msg->frame_id;
+    anchor_pose.header.stamp = map_msg->stamp;
+    anchor_pose.pose.orientation.w = 1.0;
 
     std::vector<double> cluster_dimensions = {0.0, 0.0};
     bool cluster_found = false;
@@ -102,6 +114,15 @@ BT::NodeStatus SelectGoal::tick()
             cluster_dimensions[0] = obj.cluster_dimensions.bounding_box.width;
             cluster_dimensions[1] = obj.cluster_dimensions.bounding_box.length;
             cluster_found = true;
+        }
+
+        // Only search for anchor if anchor_id is not empty.
+        if (!anchor_id.empty() && obj.id == anchor_id) {
+            anchor_pose.pose.position.x = obj.coords.x;
+            anchor_pose.pose.position.y = obj.coords.y;
+            anchor_pose.pose.position.z = obj.coords.z;
+            RCLCPP_INFO(node->get_logger(), "Found anchor object %s at position (%.2f, %.2f, %.2f)", 
+                        anchor_id.c_str(), obj.coords.x, obj.coords.y, obj.coords.z);
         }
 
         if (!goal_class.empty() && obj.class_name != goal_class) {
@@ -120,6 +141,7 @@ BT::NodeStatus SelectGoal::tick()
         similarity_scores.push_back(obj.similarity);
         goal_poses.push_back(goal_pose);
         cluster_ids.push_back(obj.cluster);
+
     }
 
     if (!cluster_found) {
@@ -133,6 +155,7 @@ BT::NodeStatus SelectGoal::tick()
     setOutput("cluster_ids", cluster_ids);
     setOutput("cluster_centroid", cluster_centroid);
     setOutput("cluster_dimensions", cluster_dimensions);
+    setOutput("anchor_pose", anchor_pose);
 
     // If clustered-map has no matching class candidates, fall back to exploring the selected cluster.
     if (candidates_ids.empty() || goal_poses.empty()) {

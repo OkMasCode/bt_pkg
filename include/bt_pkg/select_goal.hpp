@@ -25,6 +25,8 @@ public:
             BT::InputPort<std::string>("clustered_map_topic", "/vision/clustered_map_v6"),
             BT::InputPort<int>("cluster"), 
             BT::InputPort<geometry_msgs::msg::PoseStamped>("start_pose"),
+            BT::InputPort<std::string>("anchor_class"),
+            BT::InputPort<std::string>("anchor_id"),
 
             BT::InputPort<double>("similarity_threshold"),
             
@@ -37,6 +39,7 @@ public:
             BT::OutputPort<geometry_msgs::msg::PoseStamped>("cluster_centroid"),
             BT::OutputPort<std::vector<double>>("cluster_dimensions"),
             BT::OutputPort<geometry_msgs::msg::PoseStamped>("target_pose"),
+            BT::OutputPort<geometry_msgs::msg::PoseStamped>("anchor_pose"),
             // True when target_pose is an object goal, false when it is the centroid.
             BT::OutputPort<bool>("is_object_goal")
         };
