@@ -42,7 +42,7 @@ int main(int argc, char **argv)
     blackboard->set<rclcpp::Node::SharedPtr>("node", node);
 
     // Absolute path to BT XML definition.
-    std::string xml_path = "/workspaces/ros2_ws/src/bt_pkg/bt_xml/behavior_tree.xml";
+    std::string xml_path = "/home/workspace/ros2_ws/src/bt_pkg/bt_xml/behavior_tree.xml";
     
     try {
         // Instantiate tree with the configured blackboard.

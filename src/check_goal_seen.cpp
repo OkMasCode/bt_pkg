@@ -52,7 +52,7 @@ BT::NodeStatus CheckGoalSeen::tick()
     }
 
     // 2. Read Inputs from the Blackboard/XML
-    std::string file_path = "/workspaces/ros2_ws/src/yolo11_seg_bringup/config/robot_command.json";
+    std::string file_path = "/home/workspace/ros2_ws/src/yolo11_seg_bringup/config/robot_command.json";
     getInput("command_file_path", file_path);
 
     double similarity_threshold = 15.0; 

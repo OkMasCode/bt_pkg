@@ -5,7 +5,7 @@
         <Sequence name="MissionPipeline">
 
             <ReadJson 
-                file_path="/workspaces/ros2_ws/src/yolo11_seg_bringup/config/robot_command.json"
+                file_path="/home/workspace/ros2_ws/src/yolo11_seg_bringup/config/robot_command.json"
                 goal_class="{goal_class}"
                 cluster="{cluster}" 
                 action="{robot_action}"
