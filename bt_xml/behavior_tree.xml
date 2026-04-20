@@ -36,7 +36,6 @@
                     goal_poses="{goal_poses}"
                     cluster_ids="{cluster_ids}"
                     cluster_centroid="{cluster_centroid}"
-                    cluster_dimensions="{cluster_dimensions}"
                     target_pose="{target_pose}"
                     anchor_pose="{anchor_pose}"
                     is_object_goal="{is_object}"
@@ -78,7 +77,6 @@
                                     goal_poses="{goal_poses}"
                                     cluster_ids="{cluster_ids}"
                                     cluster_centroid="{cluster_centroid}"
-                                    cluster_dimensions="{cluster_dimensions}"
                                     target_pose="{target_pose}"
                                     anchor_pose="{anchor_pose}"
                                     is_object_goal="{is_object}"
@@ -93,7 +91,6 @@
                                     <GetNextPoint 
                                         next_point="{raw_exploration_pose}"
                                         cluster_centroid="{cluster_centroid}"
-                                        cluster_dimensions="{cluster_dimensions}"
                                     />
 
                                     <FindApproachPose
@@ -184,7 +181,6 @@
             <output_port name="goal_poses"/>
             <output_port name="cluster_ids"/>
             <output_port name="cluster_centroid"/>
-            <output_port name="cluster_dimensions"/>
             <output_port name="target_pose"/>
             <output_port name="anchor_pose"/>
             <output_port name="is_object_goal"/>
@@ -209,7 +205,6 @@
         </Condition>
         <Action ID="GetNextPoint">
             <input_port name="cluster_centroid"/>
-            <input_port name="cluster_dimensions"/>
             <output_port name="next_point"/>
         </Action>
         <Condition ID="CheckIsObject">
