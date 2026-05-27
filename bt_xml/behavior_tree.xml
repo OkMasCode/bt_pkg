@@ -49,16 +49,12 @@
 
                         <FindApproachPose
                             goal_pose="{anchor_pose}"
+                            start_pose="{start_pose}"
+                            target_cluster="{cluster}"
                             approach_pose="{exploration_pose}"
-                            costmap_topic="/global_costmap/costmap"
-                            min_radius="0.0"
-                            max_radius="3.0"
-                            radius_step="0.1"
-                            angle_step_deg="20.0"
-                            free_threshold="0"
                         />
 
-                        <NavigateToPose goal="{exploration_pose}"/>
+                        <NavigateToPose goal="{exploration_pose}" />
 
                         <ReactiveFallback name="ExploreUntilFound">
 
@@ -90,21 +86,17 @@
 
                                     <GetNextPoint 
                                         next_point="{raw_exploration_pose}"
-                                        cluster_centroid="{cluster_centroid}"
+                                        target_cluster="{cluster}"
                                     />
 
                                     <FindApproachPose
                                         goal_pose="{raw_exploration_pose}"
                                         approach_pose="{safe_exploration_pose}"
-                                        costmap_topic="/global_costmap/costmap"
-                                        min_radius="0.0"
-                                        max_radius="2.0"
-                                        radius_step="0.2"
-                                        angle_step_deg="30.0"
-                                        free_threshold="0"
+                                        start_pose="{start_pose}"
+                                        target_cluster="{cluster}"
                                     />
 
-                                    <NavigateToPose goal="{safe_exploration_pose}"/>
+                                    <NavigateToPose goal="{safe_exploration_pose}" />
                                     <Rotate360 angle_increment="45.0"/>
 
                                 </Sequence>
@@ -122,15 +114,11 @@
                         <FindApproachPose
                             goal_pose="{target_pose}"
                             approach_pose="{approach_pose}"
-                            costmap_topic="/global_costmap/costmap"
-                            min_radius="0.0"
-                            max_radius="3.0"
-                            radius_step="0.1"
-                            angle_step_deg="20.0"
-                            free_threshold="0"
+                            start_pose="{start_pose}"
+                            target_cluster="{cluster}"
                         />
 
-                        <NavigateToPose goal="{approach_pose}"/>
+                        <NavigateToPose goal="{approach_pose}" />
 
                 </Sequence>
 
@@ -140,7 +128,7 @@
 
                         <CheckAction action="{robot_action}"/>
 
-                        <NavigateToPose goal="{start_pose}"/>
+                        <NavigateToPose goal="{start_pose}" />
 
                     </Sequence>
 
@@ -187,16 +175,13 @@
         </Action>
         <Action ID="FindApproachPose">
             <input_port name="goal_pose"/>
-            <input_port name="costmap_topic"/>
-            <input_port name="min_radius"/>
-            <input_port name="max_radius"/>
-            <input_port name="radius_step"/>
-            <input_port name="angle_step_deg"/>
-            <input_port name="free_threshold"/>
+            <input_port name="start_pose"/>
+            <input_port name="target_cluster"/>
             <output_port name="approach_pose"/>
         </Action>
         <Action ID="NavigateToPose">
             <input_port name="goal"/>
+            <input_port name="server_name"/>
         </Action>
         <Condition ID="CheckGoalSeen">
             <input_port name="command_file_path"/>
@@ -204,7 +189,7 @@
             <output_port name="goal_pose"/>
         </Condition>
         <Action ID="GetNextPoint">
-            <input_port name="cluster_centroid"/>
+            <input_port name="target_cluster"/>
             <output_port name="next_point"/>
         </Action>
         <Condition ID="CheckIsObject">
