@@ -1,19 +1,23 @@
 #include "bt_pkg/read_json.hpp"
-#include <iostream>
+#include <rclcpp/rclcpp.hpp>
 
 BT::NodeStatus ReadJson::tick()
 {
+    // Logger from the shared blackboard node so all BT output goes through one channel.
+    auto node = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
+    auto logger = node ? node->get_logger() : rclcpp::get_logger("ReadJson");
+
     // Read input path to the JSON command file.
     std::string file_path;
     if (!getInput("file_path", file_path)) {
-        std::cerr << "[ReadJson] Error: Missing file_path input" << std::endl;
+        RCLCPP_ERROR(logger, "[COMMAND] Cannot read mission: missing file_path input");
         return BT::NodeStatus::FAILURE;
     }
 
     // Open file stream.
     std::ifstream f(file_path);
     if (!f.is_open()) {
-        std::cerr << "[ReadJson] Error: Could not open file at " << file_path << std::endl;
+        RCLCPP_ERROR(logger, "[COMMAND] Cannot read mission: file not found at %s", file_path.c_str());
         return BT::NodeStatus::FAILURE;
     }
 
@@ -46,7 +50,7 @@ BT::NodeStatus ReadJson::tick()
             } else if (logic_str == "SPECIFIC_OBJECT_WITH_FEATURES") {
                 logic_value = LogicType::SPECIFIC_OBJECT_WITH_FEATURES;
             } else {
-                std::cerr << "[ReadJson] Warning: Unrecognized logic type '" << logic_str << "'. Defaulting to GENERIC_OBJECT." << std::endl;
+                RCLCPP_WARN(logger, "[COMMAND] Unknown logic '%s' - defaulting to GENERIC_OBJECT", logic_str.c_str());
             }
         }
         setOutput("logic", logic_value);
@@ -62,7 +66,7 @@ BT::NodeStatus ReadJson::tick()
         }
         // cluster_id is mandatory for validity.
         if (cluster_id_value < 0) {
-            std::cerr << "[ReadJson] Error: Missing cluster_info.cluster_id" << std::endl;
+            RCLCPP_ERROR(logger, "[COMMAND] Invalid mission: missing cluster_info.cluster_id");
             return BT::NodeStatus::FAILURE;
         }
         setOutput("cluster", cluster_id_value);
@@ -79,17 +83,16 @@ BT::NodeStatus ReadJson::tick()
         setOutput("anchor_id", anchor_id);
 
         
-        std::cout << "[ReadJson] Successfully parsed command fields. goal='" << goal_class
-        << "' cluster=" << cluster_id_value << " action='" << action << "'." << std::endl;
-
+        RCLCPP_INFO(logger, "[COMMAND] Mission received: action='%s', find '%s' in cluster %d",
+                    action.c_str(), goal_class.c_str(), cluster_id_value);
 
         return BT::NodeStatus::SUCCESS;
 
     } catch (const json::parse_error& e) {
-        std::cerr << "[ReadJson] JSON Parse Error: " << e.what() << std::endl;
+        RCLCPP_ERROR(logger, "[COMMAND] Mission file is not valid JSON: %s", e.what());
         return BT::NodeStatus::FAILURE;
     } catch (const std::exception& e) {
-        std::cerr << "[ReadJson] Error: " << e.what() << std::endl;
+        RCLCPP_ERROR(logger, "[COMMAND] Failed to read mission: %s", e.what());
         return BT::NodeStatus::FAILURE;
     }
 }

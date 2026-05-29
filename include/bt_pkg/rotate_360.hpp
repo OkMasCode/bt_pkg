@@ -2,7 +2,7 @@
 
 #include "behaviortree_cpp/action_node.h"
 #include "rclcpp/rclcpp.hpp"
-#include "geometry_msgs/msg/twist.hpp"
+#include "geometry_msgs/msg/twist_stamped.hpp"
 #include <chrono>
 
 // Stateful BT action that rotates the robot in place for approximately one full turn.
@@ -28,7 +28,7 @@ public:
 
 private:
     // Publisher used to command angular velocity on /cmd_vel.
-    rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher_;
+    rclcpp::Publisher<geometry_msgs::msg::TwistStamped>::SharedPtr cmd_vel_publisher_;
     // Timestamp when rotation starts.
     rclcpp::Time start_time_;
     // Tracked rotation amount in degrees.

@@ -26,7 +26,30 @@ public:
         if (!getInput("action", action)) {
             return BT::NodeStatus::FAILURE;
         }
+
+        const bool bring_back = (action == "bring_back_object");
+
+        // Narrate the post-arrival decision once, only when it changes.
+        const int state = bring_back ? 1 : 0;
+        if (state != last_logged_) {
+            last_logged_ = state;
+            auto node = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
+            if (node) {
+                if (bring_back) {
+                    RCLCPP_INFO(node->get_logger(),
+                        "[DECISION] Action is bring_back_object - returning to the start pose");
+                } else {
+                    RCLCPP_INFO(node->get_logger(),
+                        "[DECISION] No bring-back requested - mission ends at the goal");
+                }
+            }
+        }
+
         // Pass only when current action is bring_back_object.
-        return action == "bring_back_object" ? BT::NodeStatus::SUCCESS : BT::NodeStatus::FAILURE;
+        return bring_back ? BT::NodeStatus::SUCCESS : BT::NodeStatus::FAILURE;
     }
+
+private:
+    // -1 = not yet logged, 0 = last logged "no bring-back", 1 = last logged "bring back".
+    int last_logged_ = -1;
 };

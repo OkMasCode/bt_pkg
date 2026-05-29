@@ -15,9 +15,11 @@ BT::NodeStatus GetNextPoint::tick()
 {
     int target_cluster_id;
     if (!getInput("target_cluster", target_cluster_id)) {
-        RCLCPP_ERROR(node_->get_logger(), "Missing required input [target_cluster]");
+        RCLCPP_ERROR(node_->get_logger(), "[EXPLORE] Cannot get next waypoint: missing target_cluster input");
         return BT::NodeStatus::FAILURE;
     }
+
+    RCLCPP_INFO(node_->get_logger(), "[EXPLORE] Requesting next exploration waypoint for cluster %d", target_cluster_id);
 
     // 1. THE FIX: Create a temporary, isolated node to bypass executor deadlocks
     auto temp_node = rclcpp::Node::make_shared("temp_waypoint_client_node");
@@ -26,7 +28,7 @@ BT::NodeStatus GetNextPoint::tick()
     auto client = temp_node->create_client<yolo11_seg_interfaces::srv::GetRoomWaypoint>("/vision/get_room_waypoint");
     
     if (!client->wait_for_service(std::chrono::seconds(2))) {
-        RCLCPP_ERROR(node_->get_logger(), "Waypoint service not available!");
+        RCLCPP_ERROR(node_->get_logger(), "[EXPLORE] Waypoint service not available");
         return BT::NodeStatus::FAILURE;
     }
 
@@ -39,13 +41,13 @@ BT::NodeStatus GetNextPoint::tick()
     // 3. Spin the TEMP node. 
     // Because temp_node isn't attached to your main executor, this is 100% safe and will not deadlock.
     if (rclcpp::spin_until_future_complete(temp_node, future) != rclcpp::FutureReturnCode::SUCCESS) {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to call waypoint service!");
+        RCLCPP_ERROR(node_->get_logger(), "[EXPLORE] Waypoint service call failed");
         return BT::NodeStatus::FAILURE;
     }
 
     auto response = future.get();
     if (!response->success) {
-        RCLCPP_ERROR(node_->get_logger(), "Python node failed to generate a safe point for cluster %d", target_cluster_id);
+        RCLCPP_ERROR(node_->get_logger(), "[EXPLORE] No exploration waypoint available for cluster %d", target_cluster_id);
         return BT::NodeStatus::FAILURE;
     }
 
@@ -64,7 +66,8 @@ BT::NodeStatus GetNextPoint::tick()
     // 5. Write to Blackboard
     setOutput("next_point", next_point);
     
-    RCLCPP_INFO(node_->get_logger(), "Successfully grabbed safe waypoint for cluster %d", target_cluster_id);
+    RCLCPP_INFO(node_->get_logger(), "[EXPLORE] Next waypoint at (%.2f, %.2f) - heading there to look around",
+                next_point.pose.position.x, next_point.pose.position.y);
 
     return BT::NodeStatus::SUCCESS;
 }

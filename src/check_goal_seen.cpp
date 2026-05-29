@@ -48,7 +48,7 @@ BT::NodeStatus CheckGoalSeen::tick()
                 latest_map_ = msg;
             });
         
-        RCLCPP_INFO(node_->get_logger(), "[CheckGoalSeen] Subscribed to live map.");
+        RCLCPP_INFO(node_->get_logger(), "[SEARCH] Watching the live map for the goal object");
     }
 
     // 2. Read Inputs from the Blackboard/XML
@@ -61,8 +61,8 @@ BT::NodeStatus CheckGoalSeen::tick()
     // 3. Determine target_class from JSON
     std::string target_class = getGoalFromJson(file_path);
     if (target_class.empty()) {
-        RCLCPP_WARN_THROTTLE(node_->get_logger(), *node_->get_clock(), 2000, 
-            "[CheckGoalSeen] Could not read goal from JSON. Returning FAILURE.");
+        RCLCPP_WARN_THROTTLE(node_->get_logger(), *node_->get_clock(), 2000,
+            "[SEARCH] No goal class in the mission file - cannot watch for it");
         return BT::NodeStatus::FAILURE;
     }
 
@@ -113,7 +113,7 @@ BT::NodeStatus CheckGoalSeen::tick()
             node_->get_logger(),
             *node_->get_clock(),
             2000,
-            "[CheckGoalSeen] Goal '%s' SEEN! Sim: %.2f >= %.2f",
+            "[SEARCH] Goal '%s' spotted (similarity %.2f >= %.2f) - stopping exploration",
             target_class.c_str(), best_sim, similarity_threshold);
             
         return BT::NodeStatus::SUCCESS;

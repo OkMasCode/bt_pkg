@@ -1,4 +1,5 @@
 #include <rclcpp/rclcpp.hpp>
+#include <rcutils/logging.h>
 #include <behaviortree_cpp/bt_factory.h>
 
 // 1. INCLUDE YOUR LEAF HEADER
@@ -18,9 +19,19 @@ int main(int argc, char **argv)
 {
     // Initialize ROS 2 runtime.
     rclcpp::init(argc, argv);
-    
+
     // Shared node used by BT leaf nodes for ROS APIs (actions, pubs/subs, TF, etc.).
     auto node = std::make_shared<rclcpp::Node>("bt_manager");
+
+    // Quiet noisy third-party in-process loggers so the mission narrative stands out
+    // on screen. Our own BT node logs (bt_manager and the named leaf loggers) stay at INFO.
+    for (const char* noisy : {"rcl", "rmw", "rclcpp", "rcl_action",
+                              "find_approach_pose_client_node",
+                              "temp_waypoint_client_node"}) {
+        if (rcutils_logging_set_logger_level(noisy, RCUTILS_LOG_SEVERITY_WARN) != RCUTILS_RET_OK) {
+            RCLCPP_WARN(node->get_logger(), "[MISSION] Could not quiet logger '%s'", noisy);
+        }
+    }
 
     // Create BehaviorTree.CPP factory and register all custom leaf nodes.
     BT::BehaviorTreeFactory factory;
@@ -43,25 +54,27 @@ int main(int argc, char **argv)
 
     // Absolute path to BT XML definition.
     std::string xml_path = "/home/workspace/ros2_ws/src/bt_pkg/bt_xml/behavior_tree.xml";
-    
+
     try {
         // Instantiate tree with the configured blackboard.
         auto tree = factory.createTreeFromFile(xml_path, blackboard);
 
+        RCLCPP_INFO(node->get_logger(), "[MISSION] Behavior tree loaded - starting mission");
+
         // Tick loop at 10 Hz until success, failure retry, or ROS shutdown.
         rclcpp::Rate rate(10);
         BT::NodeStatus status = BT::NodeStatus::RUNNING;
-        
+
         while (rclcpp::ok())
         {
-            
+
             if (status == BT::NodeStatus::SUCCESS) {
                 // Mission complete.
-                RCLCPP_INFO(node->get_logger(), "Behavior Tree completed successfully!");
+                RCLCPP_INFO(node->get_logger(), "[MISSION] Complete - all steps succeeded");
                 break;
             } else if (status == BT::NodeStatus::FAILURE) {
                 // Keep ticking to allow recovery/fallback branches on next cycle.
-                RCLCPP_WARN(node->get_logger(), "Behavior Tree failed, retrying...");
+                RCLCPP_WARN(node->get_logger(), "[MISSION] A step failed - retrying from the top");
             }
             
             while (rclcpp::ok()) {
@@ -73,7 +86,7 @@ int main(int argc, char **argv)
     }
     catch (const std::exception& ex) {
         // Covers XML load/parse errors and runtime tree construction issues.
-        RCLCPP_ERROR(node->get_logger(), "Tree Error: %s", ex.what());
+        RCLCPP_ERROR(node->get_logger(), "[MISSION] Aborted - tree error: %s", ex.what());
     }
 
     // Clean shutdown.

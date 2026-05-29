@@ -1,13 +1,16 @@
 #include "bt_pkg/get_robot_start_pose.hpp"
-#include <iostream>
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
 BT::NodeStatus GetRobotStartPose::tick()
 {
+    // Logger from the shared blackboard node so all BT output goes through one channel.
+    auto node = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
+    auto logger = node ? node->get_logger() : rclcpp::get_logger("GetRobotStartPose");
+
     // Read required frame input used for TF lookup.
     std::string frame_id;
     if (!getInput("frame_id", frame_id)) {
-        std::cerr << "[GetRobotStartPose] Error: Missing frame_id input" << std::endl;
+        RCLCPP_ERROR(logger, "[POSE] Cannot locate robot: missing frame_id input");
         return BT::NodeStatus::FAILURE;
     }
 
@@ -36,21 +39,19 @@ BT::NodeStatus GetRobotStartPose::tick()
         // Publish pose to BT blackboard output.
         setOutput("start_pose", start_pose);
 
-        std::cout << "[GetRobotStartPose] Successfully captured robot start pose at (" 
-                  << start_pose.pose.position.x << ", " 
-                  << start_pose.pose.position.y << ", " 
-                  << start_pose.pose.position.z << ")" << std::endl;
+        RCLCPP_INFO(logger, "[POSE] Robot start pose captured at (%.2f, %.2f)",
+                    start_pose.pose.position.x, start_pose.pose.position.y);
 
         return BT::NodeStatus::SUCCESS;
     }
     catch (const tf2::TransformException& e) {
         // TF lookup failures (missing frames, timeout, etc.).
-        std::cerr << "[GetRobotStartPose] TF Error: " << e.what() << std::endl;
+        RCLCPP_ERROR(logger, "[POSE] Cannot locate robot - TF lookup failed: %s", e.what());
         return BT::NodeStatus::FAILURE;
     }
     catch (const std::exception& e) {
         // Fallback for unexpected runtime errors.
-        std::cerr << "[GetRobotStartPose] Error: " << e.what() << std::endl;
+        RCLCPP_ERROR(logger, "[POSE] Cannot locate robot: %s", e.what());
         return BT::NodeStatus::FAILURE;
     }
 }

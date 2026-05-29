@@ -18,22 +18,24 @@ BT::NodeStatus FindApproachPose::tick()
 {
     int room_id;
     if (!getInput("target_cluster", room_id)) {
-        RCLCPP_ERROR(node_->get_logger(), "Missing required input [target_cluster]");
+        RCLCPP_ERROR(node_->get_logger(), "[PLAN] Cannot plan approach: missing target_cluster input");
         return BT::NodeStatus::FAILURE;
     }
     geometry_msgs::msg::PoseStamped goal_pose;
     if (!getInput("goal_pose", goal_pose)) {
-        RCLCPP_ERROR(node_->get_logger(), "Missing required input [goal_pose]");
+        RCLCPP_ERROR(node_->get_logger(), "[PLAN] Cannot plan approach: missing goal_pose input");
         return BT::NodeStatus::FAILURE;
     }
     geometry_msgs::msg::PoseStamped start_pose;
     if (!getInput("start_pose", start_pose)) {
-        RCLCPP_ERROR(node_->get_logger(), "Missing required input [start_pose]");
+        RCLCPP_ERROR(node_->get_logger(), "[PLAN] Cannot plan approach: missing start_pose input");
         return BT::NodeStatus::FAILURE;
     }
 
+    RCLCPP_INFO(node_->get_logger(), "[PLAN] Computing a safe approach pose near the goal in cluster %d", room_id);
+
     if (!client_->wait_for_service(std::chrono::seconds(2))) {
-        RCLCPP_ERROR(node_->get_logger(), "Approach pose service not available!");
+        RCLCPP_ERROR(node_->get_logger(), "[PLAN] Approach-pose service not available");
         return BT::NodeStatus::FAILURE;
     }
 
@@ -47,13 +49,13 @@ BT::NodeStatus FindApproachPose::tick()
     if (rclcpp::spin_until_future_complete(client_node_, future, std::chrono::seconds(5))
         != rclcpp::FutureReturnCode::SUCCESS)
     {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to call approach pose service!");
+        RCLCPP_ERROR(node_->get_logger(), "[PLAN] Approach-pose service call failed");
         return BT::NodeStatus::FAILURE;
     }
 
     auto response = future.get();
     if (!response->success) {
-        RCLCPP_ERROR(node_->get_logger(), "Python node failed to generate a safe point for cluster %d", room_id);
+        RCLCPP_ERROR(node_->get_logger(), "[PLAN] No safe approach pose could be found for cluster %d", room_id);
         return BT::NodeStatus::FAILURE;
     }
 
@@ -63,7 +65,8 @@ BT::NodeStatus FindApproachPose::tick()
     approach_pose.pose = response->approach_pose.pose;
     setOutput("approach_pose", approach_pose);
     
-    RCLCPP_INFO(node_->get_logger(), "Successfully grabbed safe approach pose for cluster %d", room_id);
+    RCLCPP_INFO(node_->get_logger(), "[PLAN] Safe approach pose ready at (%.2f, %.2f)",
+                approach_pose.pose.position.x, approach_pose.pose.position.y);
 
     return BT::NodeStatus::SUCCESS;
 }

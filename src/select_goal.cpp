@@ -21,7 +21,7 @@ void SelectGoal::ensureSubscription(
             std::lock_guard<std::mutex> lock(map_mutex_);
             latest_map_msg_ = msg;
         });
-    RCLCPP_INFO(node->get_logger(), "SelectGoal subscribed to clustered-map topic: %s", subscribed_topic_.c_str());
+    RCLCPP_INFO(node->get_logger(), "[SEARCH] Listening for objects on %s", subscribed_topic_.c_str());
 }
 
 bool SelectGoal::hasMapSnapshot() const
@@ -46,20 +46,20 @@ BT::NodeStatus SelectGoal::tick()
     geometry_msgs::msg::PoseStamped start_pose;
     double similarity_threshold = 8.0;
     if (!getInput("logic", logic)) {
-        RCLCPP_ERROR(node->get_logger(), "Missing logic input");
+        RCLCPP_ERROR(node->get_logger(), "[DECISION] Cannot pick a goal: missing logic input");
         return BT::NodeStatus::FAILURE;
     }
     if (!getInput("goal_class", goal_class)) {
-        RCLCPP_ERROR(node->get_logger(), "Missing goal_class input");
+        RCLCPP_ERROR(node->get_logger(), "[DECISION] Cannot pick a goal: missing goal_class input");
         return BT::NodeStatus::FAILURE;
     }
     getInput("clustered_map_topic", clustered_map_topic);
     if (!getInput("cluster", cluster)) {
-        RCLCPP_ERROR(node->get_logger(), "Missing cluster input");
+        RCLCPP_ERROR(node->get_logger(), "[DECISION] Cannot pick a goal: missing cluster input");
         return BT::NodeStatus::FAILURE;
     }
     if (!getInput("start_pose", start_pose)) {
-        RCLCPP_ERROR(node->get_logger(), "Missing start_pose input");
+        RCLCPP_ERROR(node->get_logger(), "[DECISION] Cannot pick a goal: missing start_pose input");
         return BT::NodeStatus::FAILURE;
     }
     // Anchor inputs are optional; may be empty if no anchor was selected.
@@ -69,7 +69,7 @@ BT::NodeStatus SelectGoal::tick()
     getInput("similarity_threshold", similarity_threshold);
     ensureSubscription(node, clustered_map_topic);
     if (!hasMapSnapshot()) {
-        RCLCPP_WARN(node->get_logger(), "No clustered-map message available yet on %s", clustered_map_topic.c_str());
+        RCLCPP_WARN(node->get_logger(), "[SEARCH] Waiting for the object map on %s ...", clustered_map_topic.c_str());
         return BT::NodeStatus::FAILURE;
     }
     ClusteredMapArrayMsg::SharedPtr map_msg;
@@ -106,8 +106,8 @@ BT::NodeStatus SelectGoal::tick()
             anchor_pose.pose.position.x = obj.coords.x;
             anchor_pose.pose.position.y = obj.coords.y;
             anchor_pose.pose.position.z = obj.coords.z;
-            RCLCPP_INFO(node->get_logger(), "Found anchor object %s at position (%.2f, %.2f, %.2f)", 
-                        anchor_id.c_str(), obj.coords.x, obj.coords.y, obj.coords.z);
+            RCLCPP_INFO(node->get_logger(), "[SEARCH] Found anchor object %s at (%.2f, %.2f)",
+                        anchor_id.c_str(), obj.coords.x, obj.coords.y);
         }
         if (!goal_class.empty() && obj.class_name != goal_class) {
             continue;
@@ -125,7 +125,7 @@ BT::NodeStatus SelectGoal::tick()
         cluster_ids.push_back(obj.cluster);
     }
     if (!cluster_found) {
-        RCLCPP_WARN(node->get_logger(), "Selected cluster %d not present in clustered-map topic", cluster);
+        RCLCPP_WARN(node->get_logger(), "[SEARCH] Cluster %d not in the map yet - cannot pick a goal", cluster);
         return BT::NodeStatus::FAILURE;
     }
     setOutput("candidates_ids", candidates_ids);
@@ -136,13 +136,13 @@ BT::NodeStatus SelectGoal::tick()
     setOutput("anchor_pose", anchor_pose);
     // If clustered-map has no matching class candidates, fall back to exploring the selected cluster.
     if (candidates_ids.empty() || goal_poses.empty()) {
-        RCLCPP_WARN(node->get_logger(), "No objects found for class '%s'. Using cluster centroid.", goal_class.c_str());
+        RCLCPP_WARN(node->get_logger(), "[DECISION] No '%s' seen yet - will explore cluster %d (centroid) instead", goal_class.c_str(), cluster);
         setOutput("target_pose", cluster_centroid);
         setOutput("is_object_goal", false);
         return BT::NodeStatus::SUCCESS;
     }
     if (logic == LogicType::GENERIC_OBJECT) {
-        RCLCPP_INFO(node->get_logger(), "Logic: GENERIC_OBJECT - selecting closest object of class '%s'.", goal_class.c_str());
+        RCLCPP_INFO(node->get_logger(), "[DECISION] Logic GENERIC_OBJECT: picking the closest '%s'", goal_class.c_str());
         size_t closest_idx = 0;
         double min_dist = std::numeric_limits<double>::max();
         for (size_t i = 0; i < goal_poses.size(); ++i) {
@@ -154,12 +154,12 @@ BT::NodeStatus SelectGoal::tick()
                 closest_idx = i;
             }
         }
-        RCLCPP_INFO(node->get_logger(), "Closest object found at distance: %.2f", min_dist);
+        RCLCPP_INFO(node->get_logger(), "[GOAL] Chose closest '%s' at %.2f m - navigating there", goal_class.c_str(), min_dist);
         setOutput("target_pose", goal_poses[closest_idx]);
         setOutput("is_object_goal", true);
         return BT::NodeStatus::SUCCESS;
     } else if (logic == LogicType::GENERIC_OBJECT_SPECIFIC_LOCATION) {
-        RCLCPP_INFO(node->get_logger(), "Logic: GENERIC_OBJECT_SPECIFIC_LOCATION - preferring selected cluster %d.", cluster);
+        RCLCPP_INFO(node->get_logger(), "[DECISION] Logic GENERIC_OBJECT_SPECIFIC_LOCATION: prefer '%s' inside cluster %d", goal_class.c_str(), cluster);
         std::vector<size_t> in_cluster_indices;
         for (size_t i = 0; i < goal_poses.size(); ++i) {
             if (i < cluster_ids.size() && cluster_ids[i] == cluster) {
@@ -167,7 +167,7 @@ BT::NodeStatus SelectGoal::tick()
             }
         }
         if (in_cluster_indices.empty()) {
-            RCLCPP_WARN(node->get_logger(), "No '%s' objects found in cluster %d. Using centroid.", goal_class.c_str(), cluster);
+            RCLCPP_WARN(node->get_logger(), "[DECISION] No '%s' in cluster %d - will explore it (centroid) instead", goal_class.c_str(), cluster);
             setOutput("target_pose", cluster_centroid);
             setOutput("is_object_goal", false);
             return BT::NodeStatus::SUCCESS;
@@ -183,13 +183,13 @@ BT::NodeStatus SelectGoal::tick()
                 closest_idx = idx;
             }
         }
-        RCLCPP_INFO(node->get_logger(), "Selected closest object in cluster %d at distance: %.2f", cluster, min_dist);
+        RCLCPP_INFO(node->get_logger(), "[GOAL] Chose closest '%s' in cluster %d at %.2f m - navigating there", goal_class.c_str(), cluster, min_dist);
         setOutput("target_pose", goal_poses[closest_idx]);
         setOutput("is_object_goal", true);
         return BT::NodeStatus::SUCCESS;
     } else if (logic == LogicType::SPECIFIC_OBJECT_WITH_FEATURES) {
         RCLCPP_INFO(node->get_logger(),
-                    "Logic: SPECIFIC_OBJECT_WITH_FEATURES - selecting highest-similarity object for class '%s'.",
+                    "[DECISION] Logic SPECIFIC_OBJECT_WITH_FEATURES: pick the best-matching '%s' by similarity",
                     goal_class.c_str());
         size_t best_idx = 0;
         double best_similarity = -std::numeric_limits<double>::infinity();
@@ -201,7 +201,7 @@ BT::NodeStatus SelectGoal::tick()
         }
         if (best_similarity < similarity_threshold) {
             RCLCPP_INFO(node->get_logger(),
-                        "Best similarity %.3f is below threshold %.3f. Using cluster centroid.",
+                        "[DECISION] Best match scores %.2f < threshold %.2f - not confident, exploring cluster instead",
                         best_similarity,
                         similarity_threshold);
             setOutput("target_pose", cluster_centroid);
@@ -209,7 +209,7 @@ BT::NodeStatus SelectGoal::tick()
             return BT::NodeStatus::SUCCESS;
         }
         RCLCPP_INFO(node->get_logger(),
-                    "Selected object '%s' with highest similarity %.3f (threshold %.3f).",
+                    "[GOAL] Chose object '%s' (similarity %.2f >= %.2f) - navigating there",
                     candidates_ids[best_idx].c_str(),
                     best_similarity,
                     similarity_threshold);
@@ -217,7 +217,7 @@ BT::NodeStatus SelectGoal::tick()
         setOutput("is_object_goal", true);
         return BT::NodeStatus::SUCCESS;
     }
-    RCLCPP_WARN(node->get_logger(), "Unknown logic type. Defaulting to cluster centroid.");
+    RCLCPP_WARN(node->get_logger(), "[DECISION] Unknown logic type - falling back to exploring cluster centroid");
     setOutput("target_pose", cluster_centroid);
     setOutput("is_object_goal", false);
     return BT::NodeStatus::SUCCESS;
