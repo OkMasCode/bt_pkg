@@ -64,25 +64,31 @@ int main(int argc, char **argv)
         // Tick loop at 10 Hz until success, failure retry, or ROS shutdown.
         rclcpp::Rate rate(10);
         BT::NodeStatus status = BT::NodeStatus::RUNNING;
+        BT::NodeStatus previous_status = BT::NodeStatus::IDLE;
 
         while (rclcpp::ok())
         {
+            rclcpp::spin_some(node);  // Update data first
+            status = tree.tickOnce(); // Then make decisions based on that data
 
             if (status == BT::NodeStatus::SUCCESS) {
                 // Mission complete.
                 RCLCPP_INFO(node->get_logger(), "[MISSION] Complete - all steps succeeded");
                 break;
-            } else if (status == BT::NodeStatus::FAILURE) {
-                // Keep ticking to allow recovery/fallback branches on next cycle.
+            }
+            // A failed tick resets the tree, so the next one retries from the top.
+            // Narrate only the transition: otherwise this fires at 10 Hz while waiting
+            // for the clustered map or for Nav2 to come up.
+            if (status == BT::NodeStatus::FAILURE && previous_status != BT::NodeStatus::FAILURE) {
                 RCLCPP_WARN(node->get_logger(), "[MISSION] A step failed - retrying from the top");
             }
-            
-            while (rclcpp::ok()) {
-                rclcpp::spin_some(node); // Update data first
-                status = tree.tickOnce(); // Then make decisions based on that data
-                rate.sleep();
-            }
+            previous_status = status;
+
+            rate.sleep();
         }
+
+        // Cancel anything still in flight (e.g. an active Nav2 goal) before exiting.
+        tree.haltTree();
     }
     catch (const std::exception& ex) {
         // Covers XML load/parse errors and runtime tree construction issues.
